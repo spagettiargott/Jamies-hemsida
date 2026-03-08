@@ -202,6 +202,31 @@
       bottom: 18px;
     }
 
+    .thumb-platformer {
+      background: linear-gradient(#7dc5ff 0 58%, #20344f 58% 100%);
+    }
+
+    .thumb-platformer::before {
+      width: 120%;
+      height: 48%;
+      left: -10%;
+      bottom: 0;
+      background:
+        repeating-linear-gradient(90deg, #2b3c57 0 16px, #324968 16px 32px),
+        linear-gradient(#1d2d46, #1a273d);
+      clip-path: polygon(0 100%, 0 44%, 12% 56%, 22% 40%, 35% 54%, 48% 34%, 60% 50%, 74% 38%, 86% 56%, 100% 44%, 100% 100%);
+      box-shadow: inset 0 3px 0 #8ee28e;
+    }
+
+    .thumb-platformer::after {
+      width: 10px;
+      height: 14px;
+      left: 52px;
+      bottom: 16px;
+      background: #3cf0ff;
+      box-shadow: 58px -8px 0 #ffbf46, 96px -2px 0 #ff5d73;
+    }
+
     .thumb-blaster {
       background: linear-gradient(#060d1a, #0f1d38);
     }
@@ -464,6 +489,68 @@
       margin: 0 auto;
     }
 
+    .video-gate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 8, 14, 0.88);
+      z-index: 3000;
+      padding: 14px;
+    }
+
+    .video-gate.show {
+      display: flex;
+    }
+
+    .video-gate-panel {
+      width: min(860px, 96vw);
+      border: 4px solid #3d5e88;
+      box-shadow: inset 0 0 0 4px #0c1729, 0 20px 28px rgba(0, 0, 0, 0.52);
+      background: #0c1729;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .video-gate-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: #eaf2ff;
+      font-size: 0.64rem;
+      line-height: 1.6;
+    }
+
+    .video-gate-title {
+      color: #ffbf46;
+    }
+
+    .video-gate iframe {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 3px solid #385b8a;
+      background: #000;
+    }
+
+    .video-gate-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: #eaf2ff;
+      font-size: 0.58rem;
+      line-height: 1.6;
+    }
+
+    .video-gate-actions button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     canvas {
       width: 100%;
       max-width: 960px;
@@ -497,6 +584,12 @@
           <h2>Dash Runner</h2>
           <p>Hoppa over hinder i en Geometry Dash-lik bana.</p>
           <button class="play-btn" data-game="dash">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-platformer" aria-hidden="true"></div>
+          <h2>Neon Ruins</h2>
+          <p>2D platformer med fiender, spikes och myntjakt till flaggan.</p>
+          <button class="play-btn" data-game="platformer">Spela</button>
         </article>
         <article class="card">
           <div class="thumb thumb-creator" aria-hidden="true"></div>
@@ -593,6 +686,29 @@
     </section>
   </main>
 
+  <div class="video-gate" id="videoGate" aria-hidden="true">
+    <div class="video-gate-panel">
+      <div class="video-gate-head">
+        <div>
+          <div class="video-gate-title">Helskarmslas</div>
+          <div>Se 10 sekunder av videon for att lasa upp helskarm.</div>
+        </div>
+        <button class="back-btn" id="videoGateCloseBtn" type="button">Stang</button>
+      </div>
+      <iframe
+        id="videoGateFrame"
+        src=""
+        title="Video for helskarm"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowfullscreen
+      ></iframe>
+      <div class="video-gate-actions">
+        <div id="videoGateCountdown">Vanta 10 sekunder...</div>
+        <button class="full-btn" id="videoGateContinueBtn" type="button" disabled>Fortsatt till helskarm</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const menu = document.getElementById("menu");
     const gameView = document.getElementById("gameView");
@@ -610,6 +726,11 @@
     const symmetryInput = document.getElementById("symmetryMode");
     const clearCreatureBtn = document.getElementById("clearCreatureBtn");
     const randomCreatureBtn = document.getElementById("randomCreatureBtn");
+    const videoGate = document.getElementById("videoGate");
+    const videoGateFrame = document.getElementById("videoGateFrame");
+    const videoGateCountdown = document.getElementById("videoGateCountdown");
+    const videoGateContinueBtn = document.getElementById("videoGateContinueBtn");
+    const videoGateCloseBtn = document.getElementById("videoGateCloseBtn");
 
     const app = {
       mode: "menu",
@@ -618,6 +739,12 @@
       lastTs: 0,
       mouseX: canvas.width * 0.5,
       mouseY: canvas.height * 0.5
+    };
+
+    const fullscreenGate = {
+      timer: 0,
+      intervalId: null,
+      resolver: null
     };
 
     function clamp(value, min, max) {
@@ -681,6 +808,65 @@
       while (angle > Math.PI) angle -= Math.PI * 2;
       while (angle < -Math.PI) angle += Math.PI * 2;
       return angle;
+    }
+
+    const fullscreenVideoIds = [
+      "dQw4w9WgXcQ",
+      "L_jWHffIx5E",
+      "fJ9rUzIMcZQ",
+      "hTWKbfoikeg",
+      "9bZkp7q19f0",
+      "ktvTqknDobU",
+      "kJQP7kiw5Fk",
+      "YQHsXMglC9A"
+    ];
+
+    function clearFullscreenGateTimer() {
+      if (fullscreenGate.intervalId) {
+        clearInterval(fullscreenGate.intervalId);
+        fullscreenGate.intervalId = null;
+      }
+    }
+
+    function pickFullscreenVideoId() {
+      return fullscreenVideoIds[Math.floor(Math.random() * fullscreenVideoIds.length)];
+    }
+
+    function closeFullscreenGate(unlocked) {
+      clearFullscreenGateTimer();
+      videoGate.classList.remove("show");
+      videoGate.setAttribute("aria-hidden", "true");
+      videoGateFrame.src = "";
+      videoGateContinueBtn.disabled = true;
+      const resolve = fullscreenGate.resolver;
+      fullscreenGate.resolver = null;
+      if (resolve) resolve(Boolean(unlocked));
+    }
+
+    function openFullscreenGate() {
+      return new Promise((resolve) => {
+        fullscreenGate.resolver = resolve;
+        fullscreenGate.timer = 10;
+        videoGateCountdown.textContent = "Vanta 10 sekunder...";
+        videoGateContinueBtn.disabled = true;
+        const videoId = pickFullscreenVideoId();
+        videoGateFrame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+        unlockPointerFromGame();
+        videoGate.classList.add("show");
+        videoGate.setAttribute("aria-hidden", "false");
+
+        clearFullscreenGateTimer();
+        fullscreenGate.intervalId = setInterval(() => {
+          fullscreenGate.timer -= 1;
+          if (fullscreenGate.timer > 0) {
+            videoGateCountdown.textContent = `Vanta ${fullscreenGate.timer} sekunder...`;
+            return;
+          }
+          clearFullscreenGateTimer();
+          videoGateCountdown.textContent = "Klar! Du kan fortsatta till helskarm.";
+          videoGateContinueBtn.disabled = false;
+        }, 1000);
+      });
     }
 
     const pong = {
@@ -955,6 +1141,518 @@
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           drawLabel("DU DOG", 198, 126, "#ff5d73");
           drawLabel("SPACE ELLER KLICKA FOR IGEN", 70, 146, "#f0f4ff");
+        }
+      }
+    };
+
+    const platformer = {
+      title: "Neon Ruins",
+      hint: "A/D eller pilar: spring. Space/W/upp: hoppa. R restartar.",
+      highScore: 0,
+      bestTime: null,
+      tile: 16,
+      gravity: 0.44,
+      accel: 0.55,
+      maxRun: 3.65,
+      jumpVel: -7.6,
+      coyoteFrames: 7,
+      jumpBufferFrames: 8,
+      levelRows: [
+        "................................................................................",
+        "................................................................................",
+        "......................................................C.........................",
+        ".......................####.................................#####................",
+        "..........C...................................E..................................",
+        "......#######.....................#####..............................#####.......",
+        "..S...................E..........................................................",
+        "#########.............................C.....................####.................",
+        "..................^............................####..............................",
+        ".............#####.........................E.......................C.............",
+        "...................................#####.........................................",
+        "......C.............####.............................^...........................",
+        ".........................E.....................#####.............................",
+        "............#####..............................................#####.............",
+        "..............................C...............####...............................",
+        "....^..............####..................^......................E.......G.......",
+        "################################################################################",
+        "################################################################################"
+      ],
+      solidGrid: [],
+      spikeGrid: [],
+      levelWidth: 0,
+      levelHeight: 0,
+      spawn: { x: 32, y: 32 },
+      goal: { x: 0, y: 0, w: 10, h: 14 },
+      cameraX: 0,
+      coins: [],
+      enemies: [],
+      totalCoins: 0,
+      coinsCollected: 0,
+      deaths: 0,
+      elapsed: 0,
+      state: "playing",
+      goalPulse: 0,
+      keys: {
+        left: false,
+        right: false,
+        jumpHeld: false
+      },
+      player: {
+        x: 32,
+        y: 32,
+        w: 12,
+        h: 14,
+        vx: 0,
+        vy: 0,
+        onGround: false,
+        coyote: 0,
+        jumpBuffer: 0,
+        face: 1
+      },
+      init() {
+        this.buildLevel();
+        this.resetRun(true);
+      },
+      buildLevel() {
+        const rows = this.levelRows.map((row) => row.trimEnd());
+        this.levelHeight = rows.length;
+        this.levelWidth = rows.reduce((max, row) => Math.max(max, row.length), 0);
+        this.solidGrid = Array.from({ length: this.levelHeight }, () => Array(this.levelWidth).fill(false));
+        this.spikeGrid = Array.from({ length: this.levelHeight }, () => Array(this.levelWidth).fill(false));
+        this.coins = [];
+        this.enemies = [];
+        this.spawn = { x: 32, y: 32 };
+        this.goal = { x: this.levelWidth * this.tile - 14, y: (this.levelHeight - 3) * this.tile, w: 10, h: 14 };
+
+        for (let y = 0; y < this.levelHeight; y += 1) {
+          const row = rows[y].padEnd(this.levelWidth, ".");
+          for (let x = 0; x < this.levelWidth; x += 1) {
+            const char = row[x];
+            if (char === "#") {
+              this.solidGrid[y][x] = true;
+            } else if (char === "^") {
+              this.spikeGrid[y][x] = true;
+            } else if (char === "C") {
+              this.coins.push({
+                x: x * this.tile + this.tile * 0.5,
+                y: y * this.tile + this.tile * 0.5,
+                phase: Math.random() * Math.PI * 2,
+                collected: false
+              });
+            } else if (char === "E") {
+              const ex = x * this.tile + 2;
+              const ey = y * this.tile + 2;
+              this.enemies.push({
+                spawnX: ex,
+                spawnY: ey,
+                x: ex,
+                y: ey,
+                w: 12,
+                h: 12,
+                vx: 1.18,
+                vy: 0,
+                alive: true
+              });
+            } else if (char === "S") {
+              this.spawn = { x: x * this.tile + 2, y: y * this.tile + 1 };
+            } else if (char === "G") {
+              this.goal = { x: x * this.tile + 3, y: y * this.tile + 2, w: 10, h: 14 };
+            }
+          }
+        }
+
+        this.totalCoins = this.coins.length;
+      },
+      resetPlayer() {
+        const p = this.player;
+        p.x = this.spawn.x;
+        p.y = this.spawn.y;
+        p.vx = 0;
+        p.vy = 0;
+        p.onGround = false;
+        p.coyote = this.coyoteFrames;
+        p.jumpBuffer = 0;
+        p.face = 1;
+        this.cameraX = 0;
+      },
+      resetRun(resetDeaths) {
+        if (resetDeaths) this.deaths = 0;
+        this.coinsCollected = 0;
+        this.elapsed = 0;
+        this.state = "playing";
+        this.goalPulse = 0;
+        this.coins.forEach((coin) => {
+          coin.collected = false;
+        });
+        this.enemies.forEach((enemy) => {
+          enemy.x = enemy.spawnX;
+          enemy.y = enemy.spawnY;
+          enemy.vx = Math.random() < 0.5 ? -1.18 : 1.18;
+          enemy.vy = 0;
+          enemy.alive = true;
+        });
+        this.resetPlayer();
+      },
+      pressJump() {
+        this.player.jumpBuffer = this.jumpBufferFrames;
+      },
+      onClick() {
+        if (this.state === "dead") {
+          this.resetRun(false);
+          return;
+        }
+        if (this.state === "won") {
+          this.resetRun(true);
+          return;
+        }
+        this.pressJump();
+      },
+      onKeyDown(code, repeat = false) {
+        if (code === "ArrowLeft" || code === "KeyA") this.keys.left = true;
+        if (code === "ArrowRight" || code === "KeyD") this.keys.right = true;
+        if (code === "ArrowUp" || code === "KeyW" || code === "Space") {
+          this.keys.jumpHeld = true;
+          if (this.state === "playing" && !repeat) this.pressJump();
+        }
+
+        if (code === "KeyR") {
+          this.resetRun(true);
+          return;
+        }
+
+        if (this.state === "dead" && (code === "Space" || code === "Enter" || code === "ArrowUp" || code === "KeyW")) {
+          this.resetRun(false);
+        } else if (this.state === "won" && (code === "Space" || code === "Enter" || code === "ArrowUp" || code === "KeyW")) {
+          this.resetRun(true);
+        }
+      },
+      onKeyUp(code) {
+        if (code === "ArrowLeft" || code === "KeyA") this.keys.left = false;
+        if (code === "ArrowRight" || code === "KeyD") this.keys.right = false;
+        if (code === "ArrowUp" || code === "KeyW" || code === "Space") this.keys.jumpHeld = false;
+      },
+      rectTouchesGrid(rect, grid) {
+        const minX = Math.floor(rect.x / this.tile);
+        const maxX = Math.floor((rect.x + rect.w - 0.001) / this.tile);
+        const minY = Math.floor(rect.y / this.tile);
+        const maxY = Math.floor((rect.y + rect.h - 0.001) / this.tile);
+
+        for (let ty = minY; ty <= maxY; ty += 1) {
+          if (ty >= this.levelHeight) return true;
+          if (ty < 0) continue;
+          for (let tx = minX; tx <= maxX; tx += 1) {
+            if (tx < 0 || tx >= this.levelWidth) return true;
+            if (grid[ty][tx]) return true;
+          }
+        }
+        return false;
+      },
+      rectTouchesSolid(rect) {
+        return this.rectTouchesGrid(rect, this.solidGrid);
+      },
+      rectTouchesSpikes(rect) {
+        const minX = Math.floor(rect.x / this.tile);
+        const maxX = Math.floor((rect.x + rect.w - 0.001) / this.tile);
+        const minY = Math.floor(rect.y / this.tile);
+        const maxY = Math.floor((rect.y + rect.h - 0.001) / this.tile);
+
+        for (let ty = minY; ty <= maxY; ty += 1) {
+          if (ty < 0 || ty >= this.levelHeight) continue;
+          for (let tx = minX; tx <= maxX; tx += 1) {
+            if (tx < 0 || tx >= this.levelWidth) continue;
+            if (this.spikeGrid[ty][tx]) return true;
+          }
+        }
+        return false;
+      },
+      pointOnSolid(px, py) {
+        const tx = Math.floor(px / this.tile);
+        const ty = Math.floor(py / this.tile);
+        if (ty < 0) return false;
+        if (ty >= this.levelHeight) return true;
+        if (tx < 0 || tx >= this.levelWidth) return true;
+        return this.solidGrid[ty][tx];
+      },
+      moveEntityAxis(entity, amount, axis) {
+        const steps = Math.max(1, Math.ceil(Math.abs(amount) / 4));
+        const step = amount / steps;
+        let collided = false;
+
+        for (let i = 0; i < steps; i += 1) {
+          if (axis === "x") entity.x += step;
+          else entity.y += step;
+
+          if (!this.rectTouchesSolid(entity)) continue;
+          collided = true;
+          if (axis === "x") {
+            if (step > 0) {
+              const tileX = Math.floor((entity.x + entity.w - 1) / this.tile);
+              entity.x = tileX * this.tile - entity.w;
+            } else {
+              const tileX = Math.floor(entity.x / this.tile);
+              entity.x = (tileX + 1) * this.tile;
+            }
+            entity.vx = 0;
+          } else {
+            if (step > 0) {
+              const tileY = Math.floor((entity.y + entity.h - 1) / this.tile);
+              entity.y = tileY * this.tile - entity.h;
+              if (entity === this.player) entity.onGround = true;
+            } else {
+              const tileY = Math.floor(entity.y / this.tile);
+              entity.y = (tileY + 1) * this.tile;
+            }
+            entity.vy = 0;
+          }
+          break;
+        }
+
+        return collided;
+      },
+      killPlayer() {
+        if (this.state !== "playing") return;
+        this.state = "dead";
+        this.deaths += 1;
+      },
+      updateEnemy(enemy, dtScale) {
+        if (!enemy.alive) return;
+
+        const groundedBefore = this.rectTouchesSolid({
+          x: enemy.x,
+          y: enemy.y + 1,
+          w: enemy.w,
+          h: enemy.h
+        });
+        if (!groundedBefore) enemy.vy = clamp(enemy.vy + this.gravity * 0.86 * dtScale, -8, 7);
+        else enemy.vy = 0;
+
+        const hitX = this.moveEntityAxis(enemy, enemy.vx * dtScale, "x");
+        this.moveEntityAxis(enemy, enemy.vy * dtScale, "y");
+        if (hitX) enemy.vx *= -1;
+
+        const frontX = enemy.vx >= 0 ? enemy.x + enemy.w + 1 : enemy.x - 1;
+        const footY = enemy.y + enemy.h + 1;
+        if (!this.pointOnSolid(frontX, footY)) enemy.vx *= -1;
+      },
+      update(dtScale) {
+        this.goalPulse = Math.max(0, this.goalPulse - dtScale);
+        if (this.state !== "playing") return;
+
+        this.elapsed += dtScale / 60;
+        const p = this.player;
+        const moveInput = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+        if (moveInput !== 0) {
+          p.face = moveInput;
+          p.vx += moveInput * this.accel * dtScale;
+        }
+        p.vx *= Math.pow(p.onGround ? 0.82 : 0.93, dtScale);
+        p.vx = clamp(p.vx, -this.maxRun, this.maxRun);
+
+        p.jumpBuffer = Math.max(0, p.jumpBuffer - dtScale);
+        p.coyote = Math.max(0, p.coyote - dtScale);
+
+        if (p.jumpBuffer > 0 && p.coyote > 0) {
+          p.vy = this.jumpVel;
+          p.onGround = false;
+          p.coyote = 0;
+          p.jumpBuffer = 0;
+        }
+
+        const gravityScale = this.keys.jumpHeld && p.vy < 0 ? 0.56 : 1;
+        p.vy = clamp(p.vy + this.gravity * gravityScale * dtScale, -10, 9);
+
+        p.onGround = false;
+        this.moveEntityAxis(p, p.vx * dtScale, "x");
+        this.moveEntityAxis(p, p.vy * dtScale, "y");
+
+        if (p.onGround) {
+          p.coyote = this.coyoteFrames;
+        }
+
+        if (this.rectTouchesSpikes(p) || p.y > this.levelHeight * this.tile + 36) {
+          this.killPlayer();
+          return;
+        }
+
+        for (const enemy of this.enemies) {
+          this.updateEnemy(enemy, dtScale);
+          if (!enemy.alive || this.state !== "playing") continue;
+          if (!intersects(p, enemy)) continue;
+          const stomp = p.vy > 0.8 && p.y + p.h - 2 < enemy.y + 5;
+          if (stomp) {
+            enemy.alive = false;
+            p.vy = -5.8;
+            p.onGround = false;
+          } else {
+            this.killPlayer();
+            return;
+          }
+        }
+
+        for (const coin of this.coins) {
+          if (coin.collected) continue;
+          const coinHit = {
+            x: coin.x - 4,
+            y: coin.y - 4,
+            w: 8,
+            h: 8
+          };
+          if (!intersects(p, coinHit)) continue;
+          coin.collected = true;
+          this.coinsCollected += 1;
+          this.highScore = Math.max(this.highScore, this.coinsCollected);
+        }
+
+        if (intersects(p, this.goal)) {
+          if (this.coinsCollected === this.totalCoins) {
+            this.state = "won";
+            this.highScore = Math.max(this.highScore, this.coinsCollected);
+            if (this.bestTime === null || this.elapsed < this.bestTime) this.bestTime = this.elapsed;
+          } else {
+            this.goalPulse = 44;
+          }
+        }
+
+        const worldW = this.levelWidth * this.tile;
+        const targetCam = clamp(p.x + p.w * 0.5 - canvas.width * 0.42, 0, Math.max(0, worldW - canvas.width));
+        this.cameraX += (targetCam - this.cameraX) * Math.min(1, 0.2 * dtScale);
+      },
+      draw() {
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#7dc5ff");
+        sky.addColorStop(0.62, "#27425d");
+        sky.addColorStop(1, "#1a2a3f");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const sunX = canvas.width - 54;
+        const sunY = 48;
+        ctx.fillStyle = "#ffd76e";
+        ctx.fillRect(sunX, sunY, 22, 22);
+        ctx.fillStyle = "rgba(255,215,110,0.25)";
+        ctx.fillRect(sunX - 8, sunY - 8, 38, 38);
+
+        const farOffset = Math.round(this.cameraX * 0.25) % 96;
+        for (let x = -96 - farOffset; x < canvas.width + 96; x += 96) {
+          ctx.fillStyle = "#2e4763";
+          ctx.fillRect(x, 134, 56, 84);
+          ctx.fillStyle = "#385470";
+          ctx.fillRect(x + 10, 114, 38, 104);
+        }
+
+        const nearOffset = Math.round(this.cameraX * 0.45) % 72;
+        for (let x = -72 - nearOffset; x < canvas.width + 72; x += 72) {
+          ctx.fillStyle = "#1d334d";
+          ctx.fillRect(x, 164, 48, 64);
+        }
+
+        ctx.save();
+        ctx.translate(-Math.round(this.cameraX), 0);
+
+        const startX = Math.max(0, Math.floor(this.cameraX / this.tile) - 1);
+        const endX = Math.min(this.levelWidth - 1, Math.ceil((this.cameraX + canvas.width) / this.tile) + 1);
+
+        for (let y = 0; y < this.levelHeight; y += 1) {
+          for (let x = startX; x <= endX; x += 1) {
+            if (!this.solidGrid[y][x]) continue;
+            const px = x * this.tile;
+            const py = y * this.tile;
+            ctx.fillStyle = y < this.levelHeight - 2 ? "#425f7f" : "#364d68";
+            ctx.fillRect(px, py, this.tile, this.tile);
+            ctx.fillStyle = "#92db8d";
+            if (y > 0 && !this.solidGrid[y - 1][x]) ctx.fillRect(px, py, this.tile, 3);
+            ctx.fillStyle = "rgba(255,255,255,0.12)";
+            ctx.fillRect(px + 1, py + 1, this.tile - 2, 1);
+          }
+        }
+
+        for (let y = 0; y < this.levelHeight; y += 1) {
+          for (let x = startX; x <= endX; x += 1) {
+            if (!this.spikeGrid[y][x]) continue;
+            const px = x * this.tile;
+            const py = y * this.tile;
+            ctx.fillStyle = "#ff5d73";
+            ctx.beginPath();
+            ctx.moveTo(px, py + this.tile);
+            ctx.lineTo(px + this.tile * 0.5, py + 2);
+            ctx.lineTo(px + this.tile, py + this.tile);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+
+        for (const coin of this.coins) {
+          if (coin.collected) continue;
+          const bob = Math.sin(this.elapsed * 7 + coin.phase) * 2;
+          const cx = Math.round(coin.x);
+          const cy = Math.round(coin.y + bob);
+          ctx.fillStyle = "#ffd166";
+          ctx.fillRect(cx - 3, cy - 5, 6, 10);
+          ctx.fillStyle = "#ffe7a6";
+          ctx.fillRect(cx - 1, cy - 4, 2, 8);
+        }
+
+        for (const enemy of this.enemies) {
+          if (!enemy.alive) continue;
+          const ex = Math.round(enemy.x);
+          const ey = Math.round(enemy.y);
+          ctx.fillStyle = "#ff5d73";
+          ctx.fillRect(ex, ey, enemy.w, enemy.h);
+          ctx.fillStyle = "#2a1020";
+          ctx.fillRect(ex + 2, ey + 4, 2, 2);
+          ctx.fillRect(ex + enemy.w - 4, ey + 4, 2, 2);
+          ctx.fillStyle = "#fff0f4";
+          ctx.fillRect(ex + 3, ey + 4, 1, 1);
+          ctx.fillRect(ex + enemy.w - 3, ey + 4, 1, 1);
+        }
+
+        ctx.fillStyle = "#f2f8ff";
+        ctx.fillRect(this.goal.x + 4, this.goal.y - 20, 2, 22);
+        ctx.fillStyle = "#ffbf46";
+        ctx.beginPath();
+        ctx.moveTo(this.goal.x + 6, this.goal.y - 18);
+        ctx.lineTo(this.goal.x + 16, this.goal.y - 14);
+        ctx.lineTo(this.goal.x + 6, this.goal.y - 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#6ad16c";
+        ctx.fillRect(this.goal.x, this.goal.y, this.goal.w, this.goal.h);
+
+        const p = this.player;
+        const px = Math.round(p.x);
+        const py = Math.round(p.y);
+        ctx.fillStyle = "#3cf0ff";
+        ctx.fillRect(px, py, p.w, p.h);
+        ctx.fillStyle = "#0f2a3b";
+        ctx.fillRect(px + (p.face < 0 ? 2 : p.w - 5), py + 4, 3, 3);
+        ctx.fillStyle = "#d4fbff";
+        ctx.fillRect(px + (p.face < 0 ? 2 : p.w - 4), py + 4, 1, 1);
+        ctx.fillStyle = "#10b0bf";
+        ctx.fillRect(px, py + p.h - 2, p.w, 2);
+
+        ctx.restore();
+
+        drawLabel(`COINS ${this.coinsCollected}/${this.totalCoins}`, 10, 14);
+        drawLabel(`DEATHS ${this.deaths}`, 10, 27);
+        drawLabel(`TIME ${this.elapsed.toFixed(1)}S`, 10, 40);
+        drawLabel(`BEST COINS ${this.highScore}`, 10, 53);
+        if (this.bestTime !== null) drawLabel(`BEST TIME ${this.bestTime.toFixed(1)}S`, 10, 66);
+
+        if (this.goalPulse > 0) {
+          drawLabel("SAMLA ALLA MYNT FOR ATT VINNA", 82, 84, "#ffbf46");
+        }
+
+        if (this.state === "dead") {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("DU DOG", 200, 126, "#ff5d73");
+          drawLabel("SPACE/ENTER FOR ATT FORTSATTA", 64, 146, "#f0f4ff");
+        } else if (this.state === "won") {
+          ctx.fillStyle = "rgba(0,0,0,0.58)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("BANAN KLAR", 162, 122, "#38d9a9");
+          drawLabel(`TID ${this.elapsed.toFixed(1)}S`, 168, 140, "#f0f4ff");
+          drawLabel("ENTER ELLER SPACE FOR NY RUNDA", 44, 158, "#f0f4ff");
         }
       }
     };
@@ -2972,10 +3670,10 @@
 
     const creed = {
       title: "Desert Creed 3D",
-      hint: "3rd person: mus styr kameran (upp/ner/sida), WASD ror dig. Space parkour/hopp, 1/2/3 vapen, F/H attack.",
+      hint: "3rd person: mus styr kameran (upp/ner/sida), WASD ror dig. Hall Space eller A mot vagg for att klattra.",
       running: true,
       missionComplete: false,
-      player: { x: 0, y: 0, z: 0, yaw: 0, speed: 0.2, vy: 0, radius: 0.62 },
+      player: { x: 0, y: 0, z: 0, yaw: 0, speed: 0.2, vy: 0, radius: 0.62, onGround: true },
       camera: { x: 0, y: 0, z: 0, yaw: 0, pitch: -0.2, distance: 6.2, height: 3.2 },
       keys: {
         forward: false,
@@ -2984,7 +3682,8 @@
         right: false,
         turnLeft: false,
         turnRight: false,
-        sprint: false
+        sprint: false,
+        climb: false
       },
       padState: {
         connected: false,
@@ -2993,6 +3692,7 @@
         turn: 0,
         turnY: 0,
         sprint: false,
+        climbHold: false,
         prevButtons: []
       },
       buildings: [],
@@ -3006,11 +3706,16 @@
       killCount: 0,
       totalTargets: 0,
       worldSize: 74,
+      crosshairXRatio: 0.62,
+      crosshairYRatio: 0.58,
       jumpQueued: false,
       nearVault: false,
       anim: {
         movePhase: 0,
         moveBlend: 0,
+        climbBlend: 0,
+        airBlend: 0,
+        wallContact: false,
         attack: 0,
         vault: false,
         vaultT: 0,
@@ -3026,6 +3731,7 @@
         this.player.z = 0;
         this.player.yaw = 0;
         this.player.vy = 0;
+        this.player.onGround = true;
         this.camera.yaw = this.player.yaw;
         this.camera.pitch = -0.2;
         this.weaponIndex = 0;
@@ -3037,6 +3743,9 @@
         this.nearVault = false;
         this.anim.movePhase = 0;
         this.anim.moveBlend = 0;
+        this.anim.climbBlend = 0;
+        this.anim.airBlend = 0;
+        this.anim.wallContact = false;
         this.anim.attack = 0;
         this.anim.vault = false;
         this.anim.vaultT = 0;
@@ -3048,7 +3757,8 @@
           right: false,
           turnLeft: false,
           turnRight: false,
-          sprint: false
+          sprint: false,
+          climb: false
         };
         this.generateWorld();
         this.generateTargets();
@@ -3129,6 +3839,7 @@
           this.padState.turn = 0;
           this.padState.turnY = 0;
           this.padState.sprint = false;
+          this.padState.climbHold = false;
           this.padState.prevButtons = [];
           return;
         }
@@ -3149,6 +3860,7 @@
 
         const prev = this.padState.prevButtons;
         const now = pad.buttons.map((b) => Boolean(b.pressed));
+        this.padState.climbHold = Boolean(now[0]);
         const edge = (i) => now[i] && !prev[i];
 
         if (edge(0)) {
@@ -3180,6 +3892,7 @@
         if (code === "KeyF") this.attack();
         if (code === "KeyH") this.throwKnife();
         if (code === "Space") {
+          this.keys.climb = true;
           if (this.missionComplete) this.init();
           else this.jumpQueued = true;
         }
@@ -3193,6 +3906,7 @@
         if (code === "KeyQ") this.keys.turnLeft = false;
         if (code === "KeyE") this.keys.turnRight = false;
         if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = false;
+        if (code === "Space") this.keys.climb = false;
       },
       onClick() {
         if (this.missionComplete) {
@@ -3260,37 +3974,43 @@
         this.attackCooldown = 10;
         this.anim.attack = 1;
 
-        let dirX = Math.sin(this.player.yaw);
-        let dirZ = Math.cos(this.player.yaw);
-        let best = null;
-        let bestScore = Infinity;
-        for (const target of this.targets) {
-          if (!target.alive) continue;
-          const dx = target.x - this.player.x;
-          const dz = target.z - this.player.z;
-          const dist = Math.hypot(dx, dz);
-          if (dist > 30) continue;
-          const angleTo = Math.atan2(dx, dz);
-          const diff = Math.abs(normalizeAngle(angleTo - this.player.yaw));
-          if (diff > 0.6) continue;
-          if (dist < bestScore) {
-            best = target;
-            bestScore = dist;
-          }
-        }
-        if (best) {
-          const dx = best.x - this.player.x;
-          const dz = best.z - this.player.z;
-          const inv = 1 / Math.max(0.001, Math.hypot(dx, dz));
-          dirX = dx * inv;
-          dirZ = dz * inv;
-        }
+        const crosshairX = canvas.width * this.crosshairXRatio;
+        const crosshairY = canvas.height * this.crosshairYRatio;
+        const opticalCenterX = canvas.width * 0.5;
+        const opticalCenterY = canvas.height * 0.67;
+        const yawBias = Math.atan2(crosshairX - opticalCenterX, 240);
+        const pitchBias = Math.atan2(opticalCenterY - crosshairY, 240);
+        const aimYaw = normalizeAngle(this.camera.yaw + yawBias);
+        const aimPitch = clamp(this.camera.pitch + pitchBias, -1.2, 1.2);
+        const cp = Math.cos(aimPitch);
+        const rayX = Math.sin(aimYaw) * cp;
+        const rayY = Math.sin(aimPitch);
+        const rayZ = Math.cos(aimYaw) * cp;
+
+        const bodyFx = Math.sin(this.player.yaw);
+        const bodyFz = Math.cos(this.player.yaw);
+        const spawnX = this.player.x + bodyFx * 0.78 + 0.06;
+        const spawnY = this.player.y + 1.42;
+        const spawnZ = this.player.z + bodyFz * 0.78;
+
+        const aimFarX = this.camera.x + rayX * 120;
+        const aimFarY = this.camera.y + rayY * 120;
+        const aimFarZ = this.camera.z + rayZ * 120;
+        const dirX = aimFarX - spawnX;
+        const dirY = aimFarY - spawnY;
+        const dirZ = aimFarZ - spawnZ;
+        const inv = 1 / Math.max(0.001, Math.hypot(dirX, dirY, dirZ));
+        const nx = dirX * inv;
+        const ny = dirY * inv;
+        const nz = dirZ * inv;
+        const speed = 1.14;
         this.projectiles.push({
-          x: this.player.x + dirX * 0.9,
-          y: this.player.y + 1.3,
-          z: this.player.z + dirZ * 0.9,
-          vx: dirX * 1.05,
-          vz: dirZ * 1.05,
+          x: spawnX,
+          y: spawnY,
+          z: spawnZ,
+          vx: nx * speed,
+          vy: ny * speed,
+          vz: nz * speed,
           life: 100
         });
       },
@@ -3299,12 +4019,46 @@
         for (const b of this.buildings) {
           const hx = b.w * 0.5 + radius;
           const hz = b.d * 0.5 + radius;
-          if (y < b.h + 0.08 && x > b.x - hx && x < b.x + hx && z > b.z - hz && z < b.z + hz) return true;
+          if (y < b.h - 0.02 && x > b.x - hx && x < b.x + hx && z > b.z - hz && z < b.z + hz) return true;
         }
         for (const p of this.parkourBlocks) {
           const hx = p.w * 0.5 + radius;
           const hz = p.d * 0.5 + radius;
-          if (y < p.h + 0.06 && x > p.x - hx && x < p.x + hx && z > p.z - hz && z < p.z + hz) return true;
+          if (y < p.h - 0.02 && x > p.x - hx && x < p.x + hx && z > p.z - hz && z < p.z + hz) return true;
+        }
+        return false;
+      },
+      surfaceHeightAt(x, z, limitY = Infinity) {
+        const radius = this.player.radius * 0.74;
+        let best = 0;
+        for (const b of this.buildings) {
+          const hx = b.w * 0.5 - radius;
+          const hz = b.d * 0.5 - radius;
+          if (hx <= 0 || hz <= 0) continue;
+          if (x > b.x - hx && x < b.x + hx && z > b.z - hz && z < b.z + hz) {
+            if (b.h <= limitY && b.h > best) best = b.h;
+          }
+        }
+        for (const p of this.parkourBlocks) {
+          const hx = p.w * 0.5 - radius;
+          const hz = p.d * 0.5 - radius;
+          if (hx <= 0 || hz <= 0) continue;
+          if (x > p.x - hx && x < p.x + hx && z > p.z - hz && z < p.z + hz) {
+            if (p.h <= limitY && p.h > best) best = p.h;
+          }
+        }
+        return best;
+      },
+      isAgainstWall() {
+        const p = this.player;
+        const probeY = p.y + 0.95;
+        const probe = p.radius + 0.22;
+        const dirs = [
+          [probe, 0], [-probe, 0], [0, probe], [0, -probe],
+          [probe * 0.72, probe * 0.72], [-probe * 0.72, probe * 0.72], [probe * 0.72, -probe * 0.72], [-probe * 0.72, -probe * 0.72]
+        ];
+        for (const d of dirs) {
+          if (this.collidesAt(p.x + d[0], p.z + d[1], probeY)) return true;
         }
         return false;
       },
@@ -3374,7 +4128,8 @@
         const nextX = clamp(this.player.x + dx, -this.worldSize, this.worldSize);
         const nextZ = clamp(this.player.z + dz, -this.worldSize, this.worldSize);
         const y = this.player.y;
-        if (!this.collidesAt(nextX, nextZ, y)) {
+        const blockedMove = this.collidesAt(nextX, nextZ, y);
+        if (!blockedMove) {
           this.player.x = nextX;
           this.player.z = nextZ;
         } else {
@@ -3383,14 +4138,10 @@
         }
 
         this.nearVault = Boolean(this.vaultCandidate());
+        this.anim.wallContact = blockedMove || this.isAgainstWall();
         this.anim.moveBlend = moving ? Math.min(1, this.anim.moveBlend + 0.08 * dtScale) : Math.max(0, this.anim.moveBlend - 0.08 * dtScale);
         this.anim.movePhase += (0.22 + Math.hypot(dx, dz) * 4) * dtScale;
-
-        if (moving) {
-          const targetYaw = Math.atan2(dx, dz);
-          const d = normalizeAngle(targetYaw - this.player.yaw);
-          this.player.yaw = normalizeAngle(this.player.yaw + d * 0.25);
-        }
+        this.player.yaw = this.camera.yaw;
       },
       updateVault(dtScale) {
         if (!this.anim.vault) return false;
@@ -3405,27 +4156,67 @@
           this.anim.vault = false;
           this.player.y = Math.max(0, this.anim.vaultTo.y * 0.15);
         }
+        this.anim.climbBlend = Math.max(0, this.anim.climbBlend - 0.15 * dtScale);
+        this.anim.wallContact = false;
         return true;
       },
       updateVertical(dtScale) {
         if (this.anim.vault) return;
-        this.player.vy -= 0.014 * dtScale;
+        const prevY = this.player.y;
+
+        const climbHeld = this.keys.climb || this.keys.left || this.padState.climbHold;
+        const climbing = climbHeld && this.anim.wallContact;
+        if (climbing) {
+          this.player.vy = Math.max(this.player.vy, 0.12);
+          this.anim.climbBlend = Math.min(1, this.anim.climbBlend + 0.11 * dtScale);
+          this.anim.movePhase += 0.34 * dtScale;
+        } else {
+          this.anim.climbBlend = Math.max(0, this.anim.climbBlend - 0.1 * dtScale);
+        }
+
+        this.player.vy -= (climbing ? 0.0045 : 0.014) * dtScale;
         this.player.y += this.player.vy * dtScale;
-        if (this.player.y <= 0) {
+
+        const maxSurfaceStep = Math.max(prevY, this.player.y) + 0.9;
+        const supportY = this.surfaceHeightAt(this.player.x, this.player.z, maxSurfaceStep);
+        if (this.player.vy <= 0 && this.player.y <= supportY) {
+          this.player.y = supportY;
+          this.player.vy = 0;
+          this.player.onGround = true;
+        } else {
+          this.player.onGround = false;
+        }
+
+        if (this.player.y < 0) {
           this.player.y = 0;
           this.player.vy = 0;
+          this.player.onGround = true;
         }
+        if (this.player.y > 24) {
+          this.player.y = 24;
+          if (this.player.vy > 0) this.player.vy = 0;
+        }
+        this.anim.airBlend = this.player.y > 0.05
+          ? Math.min(1, this.anim.airBlend + 0.07 * dtScale)
+          : Math.max(0, this.anim.airBlend - 0.12 * dtScale);
       },
       updateProjectiles(dtScale) {
         for (const knife of this.projectiles) {
+          knife.vy -= 0.0009 * dtScale;
           knife.x += knife.vx * dtScale;
+          knife.y += knife.vy * dtScale;
           knife.z += knife.vz * dtScale;
           knife.life -= dtScale;
+          if (knife.y <= 0) {
+            knife.life = -1;
+            continue;
+          }
           for (const target of this.targets) {
             if (!target.alive) continue;
             const dx = target.x - knife.x;
+            const dy = (target.y + 1.5) - knife.y;
             const dz = target.z - knife.z;
-            if (dx * dx + dz * dz < 1.1 * 1.1) {
+            if (dx * dx + dz * dz < 1.05 * 1.05 && Math.abs(dy) < 1.8) {
               this.killTarget(target);
               knife.life = -1;
               break;
@@ -3497,52 +4288,110 @@
           list.push({ pts, depth, color: face.color });
         }
       },
+      pushOrientedBoxFaces(list, box) {
+        const hx = box.w * 0.5;
+        const hz = box.d * 0.5;
+        const yaw = box.yaw || 0;
+        const cos = Math.cos(yaw);
+        const sin = Math.sin(yaw);
+        const local = [
+          [-hx, box.y, -hz], [hx, box.y, -hz], [hx, box.y, hz], [-hx, box.y, hz],
+          [-hx, box.y + box.h, -hz], [hx, box.y + box.h, -hz], [hx, box.y + box.h, hz], [-hx, box.y + box.h, hz]
+        ];
+        const verts = local.map((v) => [
+          box.x + v[0] * cos + v[2] * sin,
+          v[1],
+          box.z - v[0] * sin + v[2] * cos
+        ]);
+        const cam = verts.map((v) => this.toCamera(v[0], v[1], v[2]));
+        if (cam.every((v) => v.z <= 0.12)) return;
+        const faces = [
+          { idx: [0, 1, 5, 4], color: box.c1 },
+          { idx: [1, 2, 6, 5], color: box.c2 },
+          { idx: [2, 3, 7, 6], color: box.c1 },
+          { idx: [3, 0, 4, 7], color: box.c2 },
+          { idx: [4, 5, 6, 7], color: box.c3 }
+        ];
+        for (const face of faces) {
+          if (face.idx.some((i) => cam[i].z <= 0.12)) continue;
+          const pts = face.idx.map((i) => this.project(cam[i]));
+          if (pts.some((p) => !p)) continue;
+          const depth = face.idx.reduce((acc, i) => acc + cam[i].z, 0) / face.idx.length;
+          list.push({ pts, depth, color: face.color });
+        }
+      },
       pushPlayerModel(list) {
         const p = this.player;
-        const walk = Math.sin(this.anim.movePhase) * 0.35 * this.anim.moveBlend;
-        const attackSwing = Math.sin((1 - this.anim.attack) * Math.PI) * 0.7;
-        const armFront = attackSwing + walk;
-        const armBack = -walk * 0.8;
-        const legA = walk * 0.45;
-        const legB = -walk * 0.45;
+        const yaw = p.yaw;
+        const cy = Math.cos(yaw);
+        const sy = Math.sin(yaw);
+        const addPart = (lx, y, lz, w, d, h, c1, c2, c3) => {
+          const wx = p.x + lx * cy + lz * sy;
+          const wz = p.z - lx * sy + lz * cy;
+          this.pushOrientedBoxFaces(list, { x: wx, y, z: wz, w, d, h, yaw, c1, c2, c3 });
+        };
 
-        this.pushBoxFaces(list, { x: p.x, y: p.y + 0.82, z: p.z, w: 0.64, d: 0.36, h: 1.1, c1: "#f2f2f2", c2: "#e2e2e2", c3: "#f8f8f8" });
-        this.pushBoxFaces(list, { x: p.x, y: p.y + 1.82, z: p.z, w: 0.4, d: 0.34, h: 0.42, c1: "#f0d8be", c2: "#d7bea5", c3: "#f4deca" });
+        const walkBlend = (1 - this.anim.climbBlend) * this.anim.moveBlend;
+        const walk = Math.sin(this.anim.movePhase) * 0.42 * walkBlend;
+        const walkOpp = Math.sin(this.anim.movePhase + Math.PI) * 0.42 * walkBlend;
+        const climb = Math.sin(this.anim.movePhase * 1.45) * 0.34 * this.anim.climbBlend;
+        const attackSwing = Math.sin((1 - this.anim.attack) * Math.PI) * 0.75;
+        const torsoBob = Math.abs(Math.sin(this.anim.movePhase * 0.95)) * 0.1 * walkBlend + this.anim.airBlend * 0.05;
+        const shoulderTwist = Math.sin(this.anim.movePhase * 0.5) * 0.07 * walkBlend;
+        const armL = -walk * 0.9 + climb + attackSwing * 0.65;
+        const armR = walk * 0.9 - climb - attackSwing * 0.25;
+        const legL = walk * 0.85 + climb;
+        const legR = walkOpp * 0.85 - climb;
+        const cloakSway = Math.sin(this.anim.movePhase * 0.72) * 0.18 * (walkBlend + this.anim.climbBlend * 0.5);
+        const bodyY = p.y + 0.86 + torsoBob;
 
-        this.pushBoxFaces(list, { x: p.x - 0.2, y: p.y + 0.27 + Math.max(0, legA), z: p.z + legA * 0.35, w: 0.22, d: 0.22, h: 0.65, c1: "#614b35", c2: "#4b3928", c3: "#725941" });
-        this.pushBoxFaces(list, { x: p.x + 0.2, y: p.y + 0.27 + Math.max(0, legB), z: p.z + legB * 0.35, w: 0.22, d: 0.22, h: 0.65, c1: "#614b35", c2: "#4b3928", c3: "#725941" });
+        addPart(0, bodyY - 0.48, cloakSway * 0.12, 0.72, 0.4, 0.58, "#f3f3f3", "#dfdfdf", "#fbfbfb");
+        addPart(0, bodyY + 0.08, 0, 0.78, 0.42, 0.64, "#ede6dc", "#d9cebd", "#f7f0e6");
+        addPart(0, bodyY + 0.72, 0, 0.68, 0.4, 0.62, "#efeae2", "#dad2c4", "#f9f5ee");
+        addPart(0, bodyY + 0.32, 0, 0.8, 0.17, 0.13, "#6a5037", "#5a432f", "#826347");
+        addPart(0.13, bodyY + 0.2, 0.02, 0.11, 0.12, 0.34, "#a03f2a", "#7c2f20", "#b24931");
 
-        this.pushBoxFaces(list, { x: p.x - 0.46, y: p.y + 1.02 + Math.max(0, armFront), z: p.z + armFront * 0.42, w: 0.19, d: 0.19, h: 0.66, c1: "#ececec", c2: "#dcdcdc", c3: "#f4f4f4" });
-        this.pushBoxFaces(list, { x: p.x + 0.46, y: p.y + 1.02 + Math.max(0, armBack), z: p.z + armBack * 0.42, w: 0.19, d: 0.19, h: 0.66, c1: "#ececec", c2: "#dcdcdc", c3: "#f4f4f4" });
+        addPart(-0.35 + shoulderTwist, bodyY + 0.86, 0.02, 0.26, 0.24, 0.22, "#d0c6b8", "#b9ad9c", "#e0d7cb");
+        addPart(0.35 - shoulderTwist, bodyY + 0.86, 0.02, 0.26, 0.24, 0.22, "#d0c6b8", "#b9ad9c", "#e0d7cb");
+
+        addPart(0, bodyY + 1.25, 0, 0.5, 0.44, 0.26, "#f3ece2", "#ddd2c4", "#fbf6ef");
+        addPart(0, bodyY + 1.5, -0.02, 0.44, 0.4, 0.36, "#f0d8be", "#d7bea5", "#f4deca");
+        addPart(0, bodyY + 1.8, -0.08, 0.52, 0.5, 0.22, "#e7e7e7", "#d2d2d2", "#f5f5f5");
+        addPart(0, bodyY + 1.58, 0.18, 0.24, 0.06, 0.1, "#6e4a2f", "#5a3c27", "#7a5335");
+
+        addPart(-0.24, p.y + 0.8 + Math.max(0, legL * 0.35), legL * 0.2, 0.24, 0.24, 0.62, "#6a5339", "#55422f", "#7a6043");
+        addPart(-0.24, p.y + 0.24 + Math.max(0, -legL * 0.15), legL * 0.34, 0.22, 0.22, 0.58, "#5f4a34", "#4c3b2a", "#6d563d");
+        addPart(-0.24, p.y + 0.02, legL * 0.45 + 0.08, 0.26, 0.36, 0.14, "#1f1f24", "#17171a", "#2a2a31");
+
+        addPart(0.24, p.y + 0.8 + Math.max(0, legR * 0.35), legR * 0.2, 0.24, 0.24, 0.62, "#6a5339", "#55422f", "#7a6043");
+        addPart(0.24, p.y + 0.24 + Math.max(0, -legR * 0.15), legR * 0.34, 0.22, 0.22, 0.58, "#5f4a34", "#4c3b2a", "#6d563d");
+        addPart(0.24, p.y + 0.02, legR * 0.45 + 0.08, 0.26, 0.36, 0.14, "#1f1f24", "#17171a", "#2a2a31");
+
+        addPart(-0.5 + shoulderTwist * 0.5, bodyY + 0.72 + Math.max(0, armL * 0.3), armL * 0.32, 0.2, 0.2, 0.56, "#efe7dc", "#d8ccbb", "#f9f3eb");
+        addPart(-0.57 + shoulderTwist * 0.5, bodyY + 0.25 + Math.max(0, -armL * 0.16), armL * 0.42, 0.18, 0.18, 0.54, "#ded2c2", "#c6b8a4", "#ece2d6");
+        addPart(-0.57 + shoulderTwist * 0.5, bodyY + 0.12, armL * 0.48, 0.2, 0.2, 0.13, "#5d4630", "#4b3827", "#6f5439");
+
+        addPart(0.5 - shoulderTwist * 0.5, bodyY + 0.72 + Math.max(0, armR * 0.3), armR * 0.32, 0.2, 0.2, 0.56, "#efe7dc", "#d8ccbb", "#f9f3eb");
+        addPart(0.57 - shoulderTwist * 0.5, bodyY + 0.25 + Math.max(0, -armR * 0.16), armR * 0.42, 0.18, 0.18, 0.54, "#ded2c2", "#c6b8a4", "#ece2d6");
+        addPart(0.57 - shoulderTwist * 0.5, bodyY + 0.12, armR * 0.48, 0.2, 0.2, 0.13, "#5d4630", "#4b3827", "#6f5439");
+
+        addPart(0, bodyY + 0.62, -0.22 + cloakSway * 0.2, 0.76, 0.2, 1.05, "#fafafa", "#e9e9e9", "#ffffff");
+        addPart(0, bodyY + 0.12, -0.26 + cloakSway * 0.26, 0.82, 0.2, 0.92, "#f3f3f3", "#dfdfdf", "#fcfcfc");
+
+        const handX = 0.05;
+        const handZ = 0.62 + armR * 0.24;
+        const handY = bodyY + 0.42 + Math.max(0, armR * 0.16);
+
+        addPart(-0.22, bodyY + 0.28, -0.24, 0.08, 0.48, 0.08, "#786245", "#5f4d38", "#8a6f4f");
+        addPart(-0.22, bodyY + 0.66, -0.24, 0.12, 0.18, 0.18, "#2e2e36", "#22222a", "#3a3a46");
 
         if (this.weaponIndex === 1) {
-          const fx = Math.sin(p.yaw);
-          const fz = Math.cos(p.yaw);
-          this.pushBoxFaces(list, {
-            x: p.x + fx * (0.95 + attackSwing * 0.5),
-            y: p.y + 1.2,
-            z: p.z + fz * (0.95 + attackSwing * 0.5),
-            w: 0.08,
-            d: 0.95,
-            h: 0.08,
-            c1: "#e9e9e9",
-            c2: "#cdcdcd",
-            c3: "#ffffff"
-          });
+          addPart(handX, handY, handZ, 0.1, 0.28, 0.1, "#8f6f4c", "#745a3f", "#a3825a");
+          addPart(handX, handY + 0.02, handZ + 0.45, 0.09, 1.14, 0.07, "#e9ecef", "#ced4da", "#f8fbff");
         } else if (this.weaponIndex === 0) {
-          const fx = Math.sin(p.yaw);
-          const fz = Math.cos(p.yaw);
-          this.pushBoxFaces(list, {
-            x: p.x + fx * 0.55,
-            y: p.y + 1.0,
-            z: p.z + fz * 0.55,
-            w: 0.06,
-            d: 0.42,
-            h: 0.04,
-            c1: "#f0f0f0",
-            c2: "#cfcfcf",
-            c3: "#ffffff"
-          });
+          addPart(handX, handY, handZ + 0.22, 0.06, 0.44, 0.05, "#f0f0f0", "#cfcfcf", "#ffffff");
+        } else {
+          addPart(handX, handY, handZ + 0.16, 0.05, 0.32, 0.05, "#f2f2f2", "#d8d8d8", "#ffffff");
         }
       },
       drawGroundGrid() {
@@ -3583,15 +4432,18 @@
         drawLabel(`TARGETS ${alive}/${this.totalTargets}`, 10, 27);
         drawLabel(`KNIVES ${this.knifeAmmo}`, 10, 40);
         drawLabel(`PAD ${this.padState.connected ? "ON" : "OFF"}`, 10, 53, this.padState.connected ? "#9df0b8" : "#f0f4ff");
+        if (this.anim.wallContact && !this.anim.vault && !this.missionComplete) {
+          drawLabel("HALL SPACE/A MOT VAGG FOR KLATTRA", 34, 236, "#ffbf46");
+        }
         if (this.nearVault && !this.anim.vault && this.player.y <= 0.05) {
-          drawLabel("SPACE/A: PARKOUR", 142, 250, "#ffbf46");
+          drawLabel("SPACE/A: PARKOUR OVER HINDER", 88, 250, "#ffbf46");
         }
 
         ctx.strokeStyle = "#f0f4ff";
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.8;
-        const cx = canvas.width * 0.5;
-        const cy = canvas.height * 0.58;
+        const cx = canvas.width * this.crosshairXRatio;
+        const cy = canvas.height * this.crosshairYRatio;
         ctx.beginPath();
         ctx.moveTo(cx - 6, cy);
         ctx.lineTo(cx + 6, cy);
@@ -3609,6 +4461,7 @@
       },
       update(dtScale) {
         this.pollGamepad();
+        this.player.yaw = this.camera.yaw;
         this.attackCooldown = Math.max(0, this.attackCooldown - dtScale);
         this.anim.attack = Math.max(0, this.anim.attack - 0.065 * dtScale);
         if (this.missionComplete) {
@@ -3617,7 +4470,16 @@
         }
 
         if (this.jumpQueued) {
-          if (!this.tryVault() && this.player.y <= 0.05) this.player.vy = 0.24;
+          const wallReady = this.isAgainstWall();
+          if (!this.tryVault()) {
+            if (wallReady) {
+              this.anim.wallContact = true;
+              this.player.vy = Math.max(this.player.vy, 0.1);
+            } else if (this.player.onGround) {
+              this.player.vy = 0.24;
+              this.player.onGround = false;
+            }
+          }
           this.jumpQueued = false;
         }
 
@@ -3626,6 +4488,7 @@
         this.updateVertical(dtScale);
         this.updateTargets();
         this.updateProjectiles(dtScale);
+        this.player.yaw = this.camera.yaw;
         this.updateCamera();
       },
       draw() {
@@ -4156,7 +5019,7 @@
       }
     };
 
-    const games = { pong, dash, creator, snake, blaster, flappy, fifa, zombiefps, creed, spider };
+    const games = { pong, dash, platformer, creator, snake, blaster, flappy, fifa, zombiefps, creed, spider };
 
     function setCreatorUIVisible(visible) {
       creatorUI.classList.toggle("show", visible);
@@ -4184,6 +5047,7 @@
     }
 
     function backToMenu() {
+      closeFullscreenGate(false);
       if (document.fullscreenElement === gameView) {
         document.exitFullscreen().catch(() => {});
       }
@@ -4206,7 +5070,11 @@
       try {
         if (app.mode !== "game") return;
         if (document.fullscreenElement === gameView) await document.exitFullscreen();
-        else await gameView.requestFullscreen();
+        else {
+          const unlocked = await openFullscreenGate();
+          if (!unlocked) return;
+          await gameView.requestFullscreen();
+        }
       } catch (_) {
       }
       updateFullscreenButtons();
@@ -4218,6 +5086,11 @@
     backBtn.addEventListener("click", backToMenu);
     fullscreenButtons.forEach((button) => button.addEventListener("click", toggleFullscreen));
     document.addEventListener("fullscreenchange", updateFullscreenButtons);
+    videoGateCloseBtn.addEventListener("click", () => closeFullscreenGate(false));
+    videoGateContinueBtn.addEventListener("click", () => closeFullscreenGate(true));
+    videoGate.addEventListener("click", (e) => {
+      if (e.target === videoGate) closeFullscreenGate(false);
+    });
 
     canvas.addEventListener("mousemove", (e) => {
       updateVirtualMouse(e);
@@ -4295,7 +5168,7 @@
       ].includes(e.code)) {
         e.preventDefault();
       }
-      if (app.mode === "game" && app.currentGame && app.currentGame.onKeyDown) app.currentGame.onKeyDown(e.code);
+      if (app.mode === "game" && app.currentGame && app.currentGame.onKeyDown) app.currentGame.onKeyDown(e.code, e.repeat);
     });
 
     window.addEventListener("keyup", (e) => {
@@ -4322,5 +5195,3 @@
   </script>
 </body>
 </html>
-
-
