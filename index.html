@@ -1,0 +1,4326 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-1: #0b1424;
+      --bg-2: #1f3556;
+      --panel: #f0f4ff;
+      --card: #121f35;
+      --card-edge: #3d5e88;
+      --accent: #ffbf46;
+      --accent-2: #38d9a9;
+      --danger: #ff5d73;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Press Start 2P", "Courier New", monospace;
+      color: var(--panel);
+      background:
+        linear-gradient(0deg, rgba(11, 20, 36, 0.2), rgba(11, 20, 36, 0.2)),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03) 0 10px, transparent 10px 20px),
+        linear-gradient(150deg, var(--bg-1), var(--bg-2));
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .app {
+      width: min(980px, 96vw);
+    }
+
+    .menu,
+    .game-view {
+      border: 4px solid var(--card-edge);
+      box-shadow:
+        inset 0 0 0 4px #0c1729,
+        0 20px 0 #07101d,
+        0 26px 36px rgba(0, 0, 0, 0.45);
+      background: rgba(10, 20, 36, 0.9);
+      padding: 20px;
+    }
+
+    .menu-top,
+    .game-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      line-height: 1.25;
+      font-size: clamp(1rem, 2.1vw, 1.55rem);
+      text-transform: uppercase;
+      color: #f7fbff;
+      text-shadow: 2px 2px 0 #091325;
+    }
+
+    .menu p,
+    .hint {
+      font-size: clamp(0.62rem, 1.4vw, 0.75rem);
+      line-height: 1.7;
+      margin: 0 0 14px;
+      color: #dce8ff;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      border: 3px solid #37557d;
+      box-shadow: inset 0 0 0 2px #182942;
+      background: var(--card);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .thumb {
+      height: 88px;
+      border: 3px solid #2e4d73;
+      box-shadow: inset 0 0 0 2px #122035;
+      position: relative;
+      overflow: hidden;
+      background: #0d1b30;
+    }
+
+    .thumb::before,
+    .thumb::after {
+      content: "";
+      position: absolute;
+      image-rendering: pixelated;
+    }
+
+    .thumb-pong {
+      background:
+        linear-gradient(to right, transparent 49%, #dfeeff33 49%, #dfeeff33 51%, transparent 51%),
+        linear-gradient(#0c1a30, #0b1528);
+    }
+
+    .thumb-pong::before {
+      width: 46px;
+      height: 6px;
+      background: #dff2ff;
+      left: calc(50% - 23px);
+      bottom: 10px;
+    }
+
+    .thumb-pong::after {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background: #ffbf46;
+      left: 58%;
+      top: 40%;
+    }
+    .thumb-dash {
+      background: linear-gradient(#0f1630 0 70%, #1e3a63 70% 100%);
+    }
+
+    .thumb-dash::before {
+      width: 14px;
+      height: 14px;
+      background: #ffbf46;
+      left: 34px;
+      bottom: 18px;
+      box-shadow: 120px 0 0 #ff5d73;
+    }
+
+    .thumb-dash::after {
+      width: 14px;
+      height: 18px;
+      background: #ff5d73;
+      left: 154px;
+      bottom: 14px;
+      clip-path: polygon(50% 0, 0 100%, 100% 100%);
+    }
+
+    .thumb-creator {
+      background: linear-gradient(#0d182c, #11213c);
+    }
+
+    .thumb-creator::before {
+      width: 72px;
+      height: 46px;
+      left: calc(50% - 36px);
+      top: 24px;
+      background: #f59e7a;
+      border-radius: 50% / 45%;
+      box-shadow: inset -8px -6px 0 #cf6d55;
+    }
+
+    .thumb-creator::after {
+      width: 8px;
+      height: 8px;
+      left: calc(50% - 4px);
+      top: 42px;
+      border-radius: 50%;
+      background: #0f1630;
+      box-shadow: -18px -8px 0 #f5fbff, 18px -8px 0 #f5fbff, 0 12px 0 #ff9f6e;
+    }
+
+    .thumb-snake {
+      background:
+        linear-gradient(45deg, #0f1f36 25%, #0d1b30 25% 50%, #0f1f36 50% 75%, #0d1b30 75%);
+      background-size: 18px 18px;
+    }
+
+    .thumb-snake::before {
+      width: 58px;
+      height: 10px;
+      left: 42px;
+      top: 24px;
+      background: #36d399;
+      box-shadow: 10px 10px 0 #36d399, 20px 10px 0 #36d399, 30px 10px 0 #84f6b2, 30px 20px 0 #36d399;
+    }
+
+    .thumb-snake::after {
+      width: 8px;
+      height: 8px;
+      background: #ff8c6b;
+      right: 26px;
+      bottom: 18px;
+    }
+
+    .thumb-blaster {
+      background: linear-gradient(#060d1a, #0f1d38);
+    }
+
+    .thumb-blaster::before {
+      width: 20px;
+      height: 14px;
+      left: calc(50% - 10px);
+      bottom: 8px;
+      background: #38d9a9;
+      box-shadow: inset 0 -4px 0 #1c8f6d;
+    }
+
+    .thumb-blaster::after {
+      width: 66px;
+      height: 10px;
+      left: calc(50% - 33px);
+      top: 18px;
+      background: #ffbf46;
+      box-shadow: 0 12px 0 #ffbf46, 0 24px 0 #ffbf46;
+    }
+
+    .thumb-flappy {
+      background: linear-gradient(#4a89d6 0 70%, #7ab068 70% 100%);
+    }
+
+    .thumb-flappy::before {
+      width: 14px;
+      height: 12px;
+      left: 62px;
+      top: 34px;
+      background: #ffcf52;
+      box-shadow: inset -3px 0 0 #d29e2c;
+    }
+
+    .thumb-flappy::after {
+      width: 24px;
+      height: 100%;
+      right: 34px;
+      top: 0;
+      background:
+        linear-gradient(#29d391 0 32%, transparent 32% 58%, #29d391 58% 100%);
+      box-shadow: inset -4px 0 0 #19815a;
+    }
+
+    .thumb-fifa {
+      background: linear-gradient(#7fc0ff 0 36%, #2a8a56 36% 100%);
+    }
+
+    .thumb-fifa::before {
+      width: 120%;
+      height: 72%;
+      left: -10%;
+      bottom: 0;
+      background:
+        repeating-linear-gradient(90deg, #2f945e 0 12px, #358f5f 12px 24px);
+      clip-path: polygon(0 100%, 0 56%, 16% 45%, 50% 36%, 84% 45%, 100% 56%, 100% 100%);
+      box-shadow: inset 0 0 0 2px #e8f3ff;
+    }
+
+    .thumb-fifa::after {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      left: calc(50% - 5px);
+      top: 42px;
+      background: #f7f9ff;
+      box-shadow: -34px 2px 0 #e44747, 34px -2px 0 #3d59ff;
+    }
+
+    .thumb-zombie {
+      background: linear-gradient(#5678a6 0 38%, #3f4d34 38% 100%);
+    }
+
+    .thumb-zombie::before {
+      width: 120%;
+      height: 74%;
+      left: -10%;
+      bottom: 0;
+      background:
+        repeating-linear-gradient(90deg, #2d3948 0 10px, #263444 10px 20px),
+        linear-gradient(#415063, #2a3545);
+      clip-path: polygon(0 100%, 0 58%, 10% 52%, 24% 56%, 38% 42%, 54% 54%, 68% 44%, 82% 56%, 100% 50%, 100% 100%);
+    }
+
+    .thumb-zombie::after {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      left: calc(50% - 5px);
+      top: 36px;
+      background: #ffd369;
+      box-shadow: -34px 8px 0 #67ff8c, 30px 10px 0 #67ff8c;
+    }
+
+    .thumb-creed {
+      background: linear-gradient(#d7b987 0 40%, #9f8258 40% 100%);
+    }
+
+    .thumb-creed::before {
+      width: 120%;
+      height: 70%;
+      left: -10%;
+      bottom: 0;
+      background:
+        repeating-linear-gradient(90deg, #6f5a40 0 16px, #7b6548 16px 32px),
+        linear-gradient(#b09a78, #8d7655);
+      clip-path: polygon(0 100%, 12% 60%, 22% 68%, 34% 46%, 48% 64%, 60% 42%, 74% 62%, 86% 50%, 100% 100%);
+    }
+
+    .thumb-creed::after {
+      width: 12px;
+      height: 26px;
+      left: 54px;
+      bottom: 16px;
+      background: #f2f2f2;
+      box-shadow: 4px 0 0 #d4d4d4, 78px -6px 0 #3c1f1f, 92px -8px 0 #3c1f1f;
+    }
+
+    .thumb-spider {
+      background: linear-gradient(#73b6ff 0 40%, #2f2f3a 40% 100%);
+    }
+
+    .thumb-spider::before {
+      width: 120%;
+      height: 80%;
+      left: -10%;
+      bottom: 0;
+      background:
+        repeating-linear-gradient(90deg, #2d3646 0 12px, #223042 12px 24px),
+        linear-gradient(#3f4f68, #273348);
+      clip-path: polygon(0 100%, 10% 45%, 18% 70%, 28% 36%, 40% 75%, 52% 28%, 64% 66%, 76% 34%, 88% 72%, 100% 100%);
+    }
+
+    .thumb-spider::after {
+      width: 8px;
+      height: 28px;
+      left: 92px;
+      top: 14px;
+      background: #f1f7ff;
+      box-shadow: -32px 8px 0 #d22525, -31px 15px 0 #244d9a;
+      transform: rotate(18deg);
+    }
+
+    .card h2 {
+      font-size: 0.84rem;
+    }
+
+    .card p {
+      margin: 0;
+      line-height: 1.6;
+      font-size: 0.64rem;
+      min-height: 50px;
+      color: #c6d9f8;
+    }
+
+    button {
+      appearance: none;
+      border: 3px solid #122036;
+      border-bottom-color: #091325;
+      color: #06111f;
+      font: inherit;
+      font-size: 0.64rem;
+      padding: 10px 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    button:active {
+      transform: translateY(2px);
+    }
+
+    .play-btn {
+      background: var(--accent);
+    }
+
+    .back-btn {
+      background: var(--accent-2);
+    }
+
+    .full-btn {
+      background: #8db8ff;
+      color: #0b1730;
+    }
+
+    .game-view {
+      display: none;
+    }
+
+    .creator-ui {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin: 0 0 10px;
+      padding: 8px;
+      border: 3px solid #35557e;
+      box-shadow: inset 0 0 0 2px #172840;
+      background: rgba(8, 16, 30, 0.92);
+      font-size: 0.52rem;
+      line-height: 1.6;
+    }
+
+    .creator-ui.show {
+      display: grid;
+    }
+
+    .creator-ui label {
+      display: grid;
+      gap: 4px;
+      color: #dce8ff;
+    }
+
+    .creator-ui select,
+    .creator-ui input[type="range"],
+    .creator-ui input[type="color"] {
+      width: 100%;
+      border: 2px solid #33547d;
+      background: #0e1c33;
+      color: #eaf2ff;
+      font: inherit;
+      min-height: 28px;
+      padding: 4px 6px;
+    }
+
+    .creator-ui .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .creator-ui .row button {
+      flex: 1;
+      min-width: 90px;
+      font-size: 0.52rem;
+      padding: 8px 8px;
+    }
+
+    .game-view:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      box-shadow: none;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .game-view:fullscreen .hint {
+      margin: 0 0 8px;
+    }
+
+    .game-view:fullscreen canvas {
+      width: min(calc(100vw - 24px), calc((100vh - 250px) * 16 / 9));
+      max-width: none;
+      max-height: calc(100vh - 250px);
+      height: auto;
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      border: 4px solid #385b8a;
+      box-shadow: inset 0 0 0 2px #1a2f4d;
+      background: #060d19;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="menu" id="menu">
+      <div class="menu-top">
+        <h1>Arcade Hub</h1>
+      </div>
+      <p>Valj spel i retrostil och forsok sla rekord.</p>
+      <div class="cards">
+        <article class="card">
+          <div class="thumb thumb-pong" aria-hidden="true"></div>
+          <h2>Pong Breakout</h2>
+          <p>Styr plattan med musen och krossa klossarna.</p>
+          <button class="play-btn" data-game="pong">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-dash" aria-hidden="true"></div>
+          <h2>Dash Runner</h2>
+          <p>Hoppa over hinder i en Geometry Dash-lik bana.</p>
+          <button class="play-btn" data-game="dash">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-creator" aria-hidden="true"></div>
+          <h2>Creature Lab</h2>
+          <p>Bygg en Spore-inspirerad varelse med kroppsdelar.</p>
+          <button class="play-btn" data-game="creator">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-snake" aria-hidden="true"></div>
+          <h2>Snake</h2>
+          <p>At pellets, vaxt och overlev sa lange som mojligt.</p>
+          <button class="play-btn" data-game="snake">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-blaster" aria-hidden="true"></div>
+          <h2>Space Blaster</h2>
+          <p>Skjut ner fiender innan de hinner till botten.</p>
+          <button class="play-btn" data-game="blaster">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-flappy" aria-hidden="true"></div>
+          <h2>Flappy Pixel</h2>
+          <p>Klicka eller Space for att flyga mellan roren.</p>
+          <button class="play-btn" data-game="flappy">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-fifa" aria-hidden="true"></div>
+          <h2>Pixel Football 3D</h2>
+          <p>3D fotboll i FIFA-lik TV-vinkel med passningar och skott.</p>
+          <button class="play-btn" data-game="fifa">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-zombie" aria-hidden="true"></div>
+          <h2>Zombie Siege FPS</h2>
+          <p>FPS med vagor, pistol, AR och granater. Singleplayer eller online med vanner.</p>
+          <button class="play-btn" data-game="zombiefps">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-creed" aria-hidden="true"></div>
+          <h2>Desert Creed 3D</h2>
+          <p>AC1-inspirerad jakt i oppen stad med flera vapen.</p>
+          <button class="play-btn" data-game="creed">Spela</button>
+        </article>
+        <article class="card">
+          <div class="thumb thumb-spider" aria-hidden="true"></div>
+          <h2>Spider Swing 3D</h2>
+          <p>Svinga genom en stor stad med fysikbaserade webs.</p>
+          <button class="play-btn" data-game="spider">Spela</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="game-view" id="gameView">
+      <div class="game-head">
+        <h2 id="gameTitle">Spel</h2>
+        <div>
+          <button class="back-btn" id="backBtn">Till meny</button>
+          <button class="full-btn" data-fullscreen>Helskarm</button>
+        </div>
+      </div>
+      <p class="hint" id="gameHint"></p>
+      <div class="creator-ui" id="creatorUI">
+        <label>Del
+          <select id="partType">
+            <option value="eye">Oga</option>
+            <option value="horn">Horn</option>
+            <option value="mouth">Mun</option>
+            <option value="arm">Arm</option>
+            <option value="leg">Ben</option>
+            <option value="spike">Tagg</option>
+            <option value="fin">Fena</option>
+            <option value="tail">Svans</option>
+          </select>
+        </label>
+        <label>Storlek
+          <input id="partSize" type="range" min="8" max="34" value="16">
+        </label>
+        <label>Kropp
+          <input id="bodySize" type="range" min="26" max="72" value="44">
+        </label>
+        <label>Farg
+          <input id="partColor" type="color" value="#ff9f6e">
+        </label>
+        <label class="row">
+          <input id="symmetryMode" type="checkbox" checked>
+          Spegla delar
+        </label>
+        <div class="row">
+          <button class="play-btn" id="clearCreatureBtn">Rensa</button>
+          <button class="full-btn" id="randomCreatureBtn">Slumpa</button>
+        </div>
+      </div>
+      <canvas id="game" width="480" height="270" aria-label="Spelcanvas"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const menu = document.getElementById("menu");
+    const gameView = document.getElementById("gameView");
+    const gameTitle = document.getElementById("gameTitle");
+    const gameHint = document.getElementById("gameHint");
+    const backBtn = document.getElementById("backBtn");
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const fullscreenButtons = document.querySelectorAll("[data-fullscreen]");
+    const creatorUI = document.getElementById("creatorUI");
+    const partTypeInput = document.getElementById("partType");
+    const partSizeInput = document.getElementById("partSize");
+    const bodySizeInput = document.getElementById("bodySize");
+    const partColorInput = document.getElementById("partColor");
+    const symmetryInput = document.getElementById("symmetryMode");
+    const clearCreatureBtn = document.getElementById("clearCreatureBtn");
+    const randomCreatureBtn = document.getElementById("randomCreatureBtn");
+
+    const app = {
+      mode: "menu",
+      currentKey: "",
+      currentGame: null,
+      lastTs: 0,
+      mouseX: canvas.width * 0.5,
+      mouseY: canvas.height * 0.5
+    };
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function intersects(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    }
+
+    function drawLabel(text, x, y, color = "#f0f4ff") {
+      ctx.fillStyle = color;
+      ctx.font = "10px 'Press Start 2P', 'Courier New', monospace";
+      ctx.fillText(text, Math.round(x), Math.round(y));
+    }
+
+    function canvasPointFromEvent(e) {
+      if (document.pointerLockElement === canvas) {
+        return { x: app.mouseX, y: app.mouseY };
+      }
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+        y: ((e.clientY - rect.top) / rect.height) * canvas.height
+      };
+    }
+
+    function updateVirtualMouse(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      if (document.pointerLockElement === canvas) {
+        const sx = canvas.width / rect.width;
+        const sy = canvas.height / rect.height;
+        app.mouseX = clamp(app.mouseX + e.movementX * sx, 0, canvas.width);
+        app.mouseY = clamp(app.mouseY + e.movementY * sy, 0, canvas.height);
+        return;
+      }
+
+      app.mouseX = clamp(((e.clientX - rect.left) / rect.width) * canvas.width, 0, canvas.width);
+      app.mouseY = clamp(((e.clientY - rect.top) / rect.height) * canvas.height, 0, canvas.height);
+    }
+
+    async function lockPointerToGame() {
+      if (app.mode !== "game") return;
+      if (document.pointerLockElement === canvas) return;
+      try {
+        await canvas.requestPointerLock();
+      } catch (_) {
+      }
+    }
+
+    function unlockPointerFromGame() {
+      if (document.pointerLockElement === canvas) {
+        document.exitPointerLock().catch(() => {});
+      }
+    }
+
+    function normalizeAngle(a) {
+      let angle = a;
+      while (angle > Math.PI) angle -= Math.PI * 2;
+      while (angle < -Math.PI) angle += Math.PI * 2;
+      return angle;
+    }
+
+    const pong = {
+      title: "Pong Breakout",
+      hint: "Mus: flytta plattan. Klicka for att starta om efter game over.",
+      highScore: 0,
+      paddle: { w: 82, h: 8, x: 0, y: 0 },
+      ball: { x: 0, y: 0, r: 5, vx: 0, vy: 0 },
+      brickField: { rows: 4, cols: 8, w: 50, h: 11, gap: 5, top: 22 },
+      bricks: [],
+      score: 0,
+      running: true,
+      init() {
+        this.score = 0;
+        this.running = true;
+        this.paddle.x = canvas.width / 2 - this.paddle.w / 2;
+        this.paddle.y = canvas.height - 18;
+        this.buildBricks();
+        this.resetBall();
+      },
+      buildBricks() {
+        this.bricks = [];
+        const totalWidth = this.brickField.cols * this.brickField.w + (this.brickField.cols - 1) * this.brickField.gap;
+        const offsetX = (canvas.width - totalWidth) / 2;
+        for (let row = 0; row < this.brickField.rows; row += 1) {
+          for (let col = 0; col < this.brickField.cols; col += 1) {
+            this.bricks.push({
+              x: offsetX + col * (this.brickField.w + this.brickField.gap),
+              y: this.brickField.top + row * (this.brickField.h + this.brickField.gap),
+              w: this.brickField.w,
+              h: this.brickField.h,
+              alive: true
+            });
+          }
+        }
+      },
+      resetBall() {
+        this.ball.x = canvas.width / 2;
+        this.ball.y = canvas.height / 2;
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        this.ball.vx = (2.1 + Math.random() * 1.6) * dir;
+        this.ball.vy = -(2.2 + Math.random() * 1.2);
+      },
+      onMouseMove(e) {
+        const point = canvasPointFromEvent(e);
+        const mouseX = point.x;
+        this.paddle.x = clamp(mouseX - this.paddle.w / 2, 0, canvas.width - this.paddle.w);
+      },
+      onClick() {
+        if (!this.running) this.init();
+      },
+      reflectFromBrick(brick) {
+        const nearestX = clamp(this.ball.x, brick.x, brick.x + brick.w);
+        const nearestY = clamp(this.ball.y, brick.y, brick.y + brick.h);
+        const dx = this.ball.x - nearestX;
+        const dy = this.ball.y - nearestY;
+        if (dx * dx + dy * dy > this.ball.r * this.ball.r) return false;
+
+        const overlapX = this.ball.r - Math.abs(dx);
+        const overlapY = this.ball.r - Math.abs(dy);
+        if (overlapX < overlapY) this.ball.vx *= -1;
+        else this.ball.vy *= -1;
+        return true;
+      },
+      update(dtScale) {
+        if (!this.running) return;
+
+        this.ball.x += this.ball.vx * dtScale;
+        this.ball.y += this.ball.vy * dtScale;
+
+        if (this.ball.x - this.ball.r <= 0 || this.ball.x + this.ball.r >= canvas.width) this.ball.vx *= -1;
+        if (this.ball.y - this.ball.r <= 0) this.ball.vy *= -1;
+
+        const p = this.paddle;
+        const b = this.ball;
+        const hitPaddle = b.y + b.r >= p.y && b.y - b.r <= p.y + p.h && b.x >= p.x && b.x <= p.x + p.w && b.vy > 0;
+        if (hitPaddle) {
+          b.y = p.y - b.r;
+          b.vy *= -1.05;
+          const hitPos = (b.x - (p.x + p.w / 2)) / (p.w / 2);
+          b.vx += hitPos * 0.9;
+          b.vx = clamp(b.vx, -6, 6);
+        }
+
+        for (const brick of this.bricks) {
+          if (!brick.alive) continue;
+          if (this.reflectFromBrick(brick)) {
+            brick.alive = false;
+            this.score += 1;
+            this.highScore = Math.max(this.highScore, this.score);
+            break;
+          }
+        }
+
+        if (this.bricks.every((brick) => !brick.alive)) {
+          this.buildBricks();
+          this.resetBall();
+        }
+
+        if (b.y - b.r > canvas.height) this.running = false;
+      },
+      draw() {
+        ctx.fillStyle = "#0b1328";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let y = 0; y < canvas.height; y += 8) {
+          ctx.fillStyle = y % 16 === 0 ? "#101b34" : "#0d1730";
+          ctx.fillRect(0, y, canvas.width, 8);
+        }
+
+        for (const brick of this.bricks) {
+          if (!brick.alive) continue;
+          const row = Math.floor((brick.y - this.brickField.top) / (this.brickField.h + this.brickField.gap));
+          const colors = ["#ff6b6b", "#feca57", "#48dbfb", "#1dd1a1"];
+          ctx.fillStyle = colors[row % colors.length];
+          ctx.fillRect(Math.round(brick.x), Math.round(brick.y), brick.w, brick.h);
+          ctx.fillStyle = "rgba(255,255,255,0.35)";
+          ctx.fillRect(Math.round(brick.x), Math.round(brick.y), brick.w, 2);
+        }
+
+        ctx.fillStyle = "#e8f1ff";
+        ctx.fillRect(Math.round(this.paddle.x), Math.round(this.paddle.y), this.paddle.w, this.paddle.h);
+
+        ctx.fillStyle = "#ffbf46";
+        ctx.fillRect(Math.round(this.ball.x - this.ball.r), Math.round(this.ball.y - this.ball.r), this.ball.r * 2, this.ball.r * 2);
+
+        drawLabel(`POANG ${this.score}`, 10, 14);
+        drawLabel(`REKORD ${this.highScore}`, 10, 27);
+
+        if (!this.running) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("GAME OVER", 155, 126, "#ff5d73");
+          drawLabel("KLICKA FOR NY RUNDA", 95, 146, "#f0f4ff");
+        }
+      }
+    };
+
+    const dash = {
+      title: "Dash Runner",
+      hint: "Space, pil upp eller klick: hoppa over hinder.",
+      highScore: 0,
+      running: true,
+      groundY: 220,
+      player: { x: 72, y: 0, w: 16, h: 16, vy: 0 },
+      gravity: 0.62,
+      jumpForce: -8.4,
+      obstacles: [],
+      stars: [],
+      spawnTimer: 0,
+      spawnEvery: 56,
+      speed: 3.6,
+      score: 0,
+      init() {
+        this.running = true;
+        this.player.y = this.groundY - this.player.h;
+        this.player.vy = 0;
+        this.obstacles = [];
+        this.stars = Array.from({ length: 26 }, () => ({
+          x: Math.random() * canvas.width,
+          y: Math.random() * 120
+        }));
+        this.spawnTimer = 0;
+        this.spawnEvery = 56;
+        this.speed = 3.6;
+        this.score = 0;
+      },
+      jump() {
+        if (!this.running) {
+          this.init();
+          return;
+        }
+        const onGround = this.player.y >= this.groundY - this.player.h - 1;
+        if (onGround) this.player.vy = this.jumpForce;
+      },
+      onClick() {
+        this.jump();
+      },
+      onKeyDown(code) {
+        if (code === "Space" || code === "ArrowUp" || code === "KeyW") this.jump();
+      },
+      update(dtScale) {
+        if (!this.running) return;
+
+        this.player.vy += this.gravity * dtScale;
+        this.player.y += this.player.vy * dtScale;
+        if (this.player.y > this.groundY - this.player.h) {
+          this.player.y = this.groundY - this.player.h;
+          this.player.vy = 0;
+        }
+
+        this.spawnTimer += dtScale;
+        if (this.spawnTimer >= this.spawnEvery) {
+          this.spawnTimer = 0;
+          const h = 12 + Math.random() * 18;
+          const w = 10 + Math.random() * 8;
+          this.obstacles.push({
+            x: canvas.width + 20,
+            y: this.groundY - h,
+            w,
+            h,
+            passed: false
+          });
+          this.spawnEvery = Math.max(30, this.spawnEvery - 0.06);
+        }
+
+        this.speed = Math.min(7.2, this.speed + 0.0015 * dtScale);
+        for (const obs of this.obstacles) {
+          obs.x -= this.speed * dtScale;
+          if (!obs.passed && obs.x + obs.w < this.player.x) {
+            obs.passed = true;
+            this.score += 1;
+            this.highScore = Math.max(this.highScore, this.score);
+          }
+        }
+        this.obstacles = this.obstacles.filter((obs) => obs.x + obs.w > -20);
+
+        const hitbox = {
+          x: this.player.x + 2,
+          y: this.player.y + 2,
+          w: this.player.w - 4,
+          h: this.player.h - 2
+        };
+        for (const obs of this.obstacles) {
+          if (intersects(hitbox, obs)) {
+            this.running = false;
+            break;
+          }
+        }
+      },
+      draw() {
+        ctx.fillStyle = "#0f1630";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (const star of this.stars) {
+          ctx.fillStyle = "#9cc9ff";
+          ctx.fillRect(Math.round(star.x), Math.round(star.y), 2, 2);
+          star.x -= 0.45;
+          if (star.x < -2) {
+            star.x = canvas.width + Math.random() * 16;
+            star.y = Math.random() * 120;
+          }
+        }
+
+        ctx.fillStyle = "#1e3a63";
+        ctx.fillRect(0, this.groundY, canvas.width, canvas.height - this.groundY);
+        for (let i = 0; i < canvas.width; i += 14) {
+          ctx.fillStyle = i % 28 === 0 ? "#2ec4b6" : "#3f8fbe";
+          ctx.fillRect(i, this.groundY + 9, 8, 4);
+        }
+
+        ctx.fillStyle = "#ffbf46";
+        ctx.fillRect(Math.round(this.player.x), Math.round(this.player.y), this.player.w, this.player.h);
+        ctx.fillStyle = "#0f1630";
+        ctx.fillRect(Math.round(this.player.x + 3), Math.round(this.player.y + 3), 4, 4);
+
+        for (const obs of this.obstacles) {
+          ctx.fillStyle = "#ff5d73";
+          ctx.beginPath();
+          ctx.moveTo(Math.round(obs.x), Math.round(obs.y + obs.h));
+          ctx.lineTo(Math.round(obs.x + obs.w / 2), Math.round(obs.y));
+          ctx.lineTo(Math.round(obs.x + obs.w), Math.round(obs.y + obs.h));
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        drawLabel(`POANG ${this.score}`, 10, 14);
+        drawLabel(`REKORD ${this.highScore}`, 10, 27);
+
+        if (!this.running) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("DU DOG", 198, 126, "#ff5d73");
+          drawLabel("SPACE ELLER KLICKA FOR IGEN", 70, 146, "#f0f4ff");
+        }
+      }
+    };
+
+    const creator = {
+      title: "Creature Lab",
+      hint: "Spore-inspirerad skapare: klicka for att placera, dra for att flytta, hogerklick for att ta bort.",
+      baseBodyColor: "#f59e7a",
+      baseShadeColor: "#cf6d55",
+      bodyRadius: 44,
+      core: { x: 240, y: 148 },
+      parts: [],
+      nextPartId: 1,
+      dragId: 0,
+      selectedType: "eye",
+      selectedSize: 16,
+      selectedColor: "#ff9f6e",
+      symmetry: true,
+      init() {
+        this.parts = [];
+        this.nextPartId = 1;
+        this.dragId = 0;
+        this.core.x = canvas.width * 0.5;
+        this.core.y = canvas.height * 0.56;
+        this.selectedType = partTypeInput.value || "eye";
+        this.selectedSize = Number(partSizeInput.value) || 16;
+        this.selectedColor = partColorInput.value || "#ff9f6e";
+        this.symmetry = Boolean(symmetryInput.checked);
+        this.bodyRadius = Number(bodySizeInput.value) || 44;
+      },
+      randomCreature() {
+        this.parts = [];
+        this.nextPartId = 1;
+        this.bodyRadius = 30 + Math.floor(Math.random() * 34);
+        bodySizeInput.value = String(this.bodyRadius);
+
+        const types = ["eye", "horn", "mouth", "arm", "leg", "spike", "fin", "tail"];
+        for (let i = 0; i < 12; i += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = this.bodyRadius + 12 + Math.random() * 56;
+          const px = this.core.x + Math.cos(angle) * dist;
+          const py = this.core.y + Math.sin(angle) * dist * 0.78;
+          const type = types[Math.floor(Math.random() * types.length)];
+          const color = `hsl(${Math.floor(Math.random() * 360)} 85% 68%)`;
+          const size = 10 + Math.floor(Math.random() * 18);
+          this.placePart(type, px, py, size, color, Math.random() > 0.35);
+        }
+      },
+      getPartById(id) {
+        return this.parts.find((part) => part.id === id);
+      },
+      partRadius(part) {
+        return Math.max(6, part.size * 0.65);
+      },
+      findPartAt(x, y) {
+        for (let i = this.parts.length - 1; i >= 0; i -= 1) {
+          const part = this.parts[i];
+          const r = this.partRadius(part);
+          const dx = x - part.x;
+          const dy = y - part.y;
+          if (dx * dx + dy * dy <= r * r) return part;
+        }
+        return null;
+      },
+      removePart(part) {
+        this.parts = this.parts.filter((item) => item.id !== part.id && item.id !== part.pairId);
+      },
+      mirrorX(x) {
+        return this.core.x - (x - this.core.x);
+      },
+      placePart(type, x, y, size, color, withSymmetry) {
+        const base = {
+          id: this.nextPartId++,
+          type,
+          x,
+          y,
+          size,
+          color,
+          pairId: 0
+        };
+        this.parts.push(base);
+
+        if (withSymmetry && Math.abs(x - this.core.x) > 4) {
+          const mirrored = {
+            id: this.nextPartId++,
+            type,
+            x: this.mirrorX(x),
+            y,
+            size,
+            color,
+            pairId: base.id
+          };
+          base.pairId = mirrored.id;
+          this.parts.push(mirrored);
+        }
+      },
+      onMouseDown(e) {
+        const point = canvasPointFromEvent(e);
+        const hit = this.findPartAt(point.x, point.y);
+
+        if (e.button === 2) {
+          e.preventDefault();
+          if (hit) this.removePart(hit);
+          return;
+        }
+
+        if (e.button !== 0) return;
+
+        if (hit) {
+          this.dragId = hit.id;
+          return;
+        }
+
+        this.placePart(
+          this.selectedType,
+          point.x,
+          point.y,
+          this.selectedSize,
+          this.selectedColor,
+          this.symmetry
+        );
+      },
+      onMouseMove(e) {
+        if (!this.dragId) return;
+        const part = this.getPartById(this.dragId);
+        if (!part) return;
+        const point = canvasPointFromEvent(e);
+        part.x = point.x;
+        part.y = point.y;
+
+        if (part.pairId) {
+          const pair = this.getPartById(part.pairId);
+          if (pair) {
+            pair.x = this.mirrorX(point.x);
+            pair.y = point.y;
+          }
+        }
+      },
+      onMouseUp() {
+        this.dragId = 0;
+      },
+      onMouseLeave() {
+        this.dragId = 0;
+      },
+      update() {
+      },
+      drawBody() {
+        const x = this.core.x;
+        const y = this.core.y;
+        const r = this.bodyRadius;
+
+        ctx.fillStyle = "#0c1628";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let yy = 0; yy < canvas.height; yy += 6) {
+          ctx.fillStyle = yy % 12 === 0 ? "#111d33" : "#0d182c";
+          ctx.fillRect(0, yy, canvas.width, 6);
+        }
+
+        ctx.fillStyle = "#1d2f4e";
+        ctx.fillRect(0, 210, canvas.width, 60);
+
+        ctx.fillStyle = this.baseShadeColor;
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x), Math.round(y + 2), r * 1.26, r * 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = this.baseBodyColor;
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x), Math.round(y), r * 1.16, r * 0.82, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255,255,255,0.22)";
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x - r * 0.24), Math.round(y - r * 0.2), r * 0.34, r * 0.24, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+      },
+      drawPart(part) {
+        const x = Math.round(part.x);
+        const y = Math.round(part.y);
+        const s = part.size;
+
+        if (part.type === "eye") {
+          ctx.fillStyle = "#f5fbff";
+          ctx.beginPath();
+          ctx.arc(x, y, s * 0.46, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#101828";
+          ctx.beginPath();
+          ctx.arc(x + s * 0.08, y + s * 0.03, s * 0.19, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#9bc7ff";
+          ctx.beginPath();
+          ctx.arc(x + s * 0.12, y + s * 0.02, s * 0.11, 0, Math.PI * 2);
+          ctx.fill();
+          return;
+        }
+
+        if (part.type === "horn" || part.type === "spike") {
+          ctx.fillStyle = part.color;
+          ctx.beginPath();
+          ctx.moveTo(x, y - s);
+          ctx.lineTo(x - s * 0.36, y + s * 0.4);
+          ctx.lineTo(x + s * 0.36, y + s * 0.4);
+          ctx.closePath();
+          ctx.fill();
+          return;
+        }
+
+        if (part.type === "mouth") {
+          ctx.strokeStyle = part.color;
+          ctx.lineWidth = Math.max(2, Math.floor(s * 0.18));
+          ctx.beginPath();
+          ctx.arc(x, y, s * 0.52, 0.1, Math.PI - 0.1);
+          ctx.stroke();
+          ctx.fillStyle = "#f8fbff";
+          ctx.fillRect(x - s * 0.25, y + 1, s * 0.5, 3);
+          return;
+        }
+
+        if (part.type === "arm") {
+          ctx.strokeStyle = part.color;
+          ctx.lineWidth = Math.max(2, Math.floor(s * 0.24));
+          ctx.beginPath();
+          ctx.moveTo(x - s * 0.5, y - s * 0.2);
+          ctx.quadraticCurveTo(x, y - s * 0.7, x + s * 0.5, y + s * 0.1);
+          ctx.stroke();
+          ctx.fillStyle = part.color;
+          ctx.beginPath();
+          ctx.arc(x + s * 0.56, y + s * 0.14, s * 0.21, 0, Math.PI * 2);
+          ctx.fill();
+          return;
+        }
+
+        if (part.type === "leg") {
+          ctx.fillStyle = part.color;
+          ctx.fillRect(x - s * 0.22, y - s * 0.5, s * 0.44, s * 0.92);
+          ctx.fillStyle = "#0b1221";
+          ctx.fillRect(x - s * 0.38, y + s * 0.36, s * 0.76, s * 0.2);
+          return;
+        }
+
+        if (part.type === "fin") {
+          ctx.fillStyle = part.color;
+          ctx.beginPath();
+          ctx.moveTo(x - s * 0.6, y + s * 0.5);
+          ctx.lineTo(x - s * 0.2, y - s * 0.5);
+          ctx.lineTo(x + s * 0.56, y + s * 0.3);
+          ctx.closePath();
+          ctx.fill();
+          return;
+        }
+
+        if (part.type === "tail") {
+          ctx.strokeStyle = part.color;
+          ctx.lineWidth = Math.max(2, Math.floor(s * 0.17));
+          ctx.beginPath();
+          ctx.moveTo(x - s * 0.6, y + s * 0.3);
+          ctx.quadraticCurveTo(x - s * 0.1, y - s * 0.7, x + s * 0.5, y + s * 0.1);
+          ctx.stroke();
+          ctx.fillStyle = part.color;
+          ctx.beginPath();
+          ctx.arc(x + s * 0.55, y + s * 0.12, s * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+          return;
+        }
+      },
+      draw() {
+        this.drawBody();
+
+        for (const part of this.parts) {
+          this.drawPart(part);
+        }
+
+        // Draw a cursor in locked mode so editing stays usable.
+        ctx.strokeStyle = "#e7f0ff";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(app.mouseX - 5, app.mouseY);
+        ctx.lineTo(app.mouseX + 5, app.mouseY);
+        ctx.moveTo(app.mouseX, app.mouseY - 5);
+        ctx.lineTo(app.mouseX, app.mouseY + 5);
+        ctx.stroke();
+
+        drawLabel(`DELAR ${this.parts.length}`, 10, 14);
+        drawLabel(`SYMM ${this.symmetry ? "PA" : "AV"}`, 10, 27);
+        drawLabel(`HOGERKLICK TAR BORT`, 10, 40, "#a9c4ee");
+      }
+    };
+
+    const snake = {
+      title: "Snake",
+      hint: "Pilar eller WASD: styr. Space/Enter efter game over.",
+      highScore: 0,
+      cell: 15,
+      cols: 32,
+      rows: 18,
+      body: [],
+      dir: { x: 1, y: 0 },
+      nextDir: { x: 1, y: 0 },
+      food: { x: 12, y: 9 },
+      stepTimer: 0,
+      stepEvery: 6,
+      running: true,
+      score: 0,
+      init() {
+        this.body = [
+          { x: 12, y: 9 },
+          { x: 11, y: 9 },
+          { x: 10, y: 9 }
+        ];
+        this.dir = { x: 1, y: 0 };
+        this.nextDir = { x: 1, y: 0 };
+        this.stepTimer = 0;
+        this.stepEvery = 6;
+        this.running = true;
+        this.score = 0;
+        this.placeFood();
+      },
+      placeFood() {
+        let candidate = null;
+        do {
+          candidate = {
+            x: Math.floor(Math.random() * this.cols),
+            y: Math.floor(Math.random() * this.rows)
+          };
+        } while (this.body.some((part) => part.x === candidate.x && part.y === candidate.y));
+        this.food = candidate;
+      },
+      setDir(x, y) {
+        if (x === -this.dir.x && y === -this.dir.y) return;
+        this.nextDir = { x, y };
+      },
+      onKeyDown(code) {
+        if (code === "ArrowUp" || code === "KeyW") this.setDir(0, -1);
+        if (code === "ArrowDown" || code === "KeyS") this.setDir(0, 1);
+        if (code === "ArrowLeft" || code === "KeyA") this.setDir(-1, 0);
+        if (code === "ArrowRight" || code === "KeyD") this.setDir(1, 0);
+        if (!this.running && (code === "Space" || code === "Enter")) this.init();
+      },
+      onClick() {
+        if (!this.running) this.init();
+      },
+      tick() {
+        this.dir = { ...this.nextDir };
+        const head = this.body[0];
+        const next = { x: head.x + this.dir.x, y: head.y + this.dir.y };
+
+        if (next.x < 0 || next.y < 0 || next.x >= this.cols || next.y >= this.rows) {
+          this.running = false;
+          return;
+        }
+        if (this.body.some((part) => part.x === next.x && part.y === next.y)) {
+          this.running = false;
+          return;
+        }
+
+        this.body.unshift(next);
+        if (next.x === this.food.x && next.y === this.food.y) {
+          this.score += 1;
+          this.highScore = Math.max(this.highScore, this.score);
+          this.placeFood();
+        } else {
+          this.body.pop();
+        }
+      },
+      update(dtScale) {
+        if (!this.running) return;
+
+        this.stepEvery = Math.max(2.2, 6 - this.score * 0.08);
+        this.stepTimer += dtScale;
+        while (this.stepTimer >= this.stepEvery) {
+          this.stepTimer -= this.stepEvery;
+          this.tick();
+          if (!this.running) break;
+        }
+      },
+      draw() {
+        ctx.fillStyle = "#081326";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let y = 0; y < this.rows; y += 1) {
+          for (let x = 0; x < this.cols; x += 1) {
+            ctx.fillStyle = (x + y) % 2 === 0 ? "#0f1f36" : "#0d1b30";
+            ctx.fillRect(x * this.cell, y * this.cell, this.cell, this.cell);
+          }
+        }
+
+        ctx.fillStyle = "#ff8c6b";
+        ctx.fillRect(this.food.x * this.cell + 3, this.food.y * this.cell + 3, this.cell - 6, this.cell - 6);
+
+        for (let i = this.body.length - 1; i >= 0; i -= 1) {
+          const part = this.body[i];
+          ctx.fillStyle = i === 0 ? "#84f6b2" : "#36d399";
+          ctx.fillRect(part.x * this.cell + 2, part.y * this.cell + 2, this.cell - 4, this.cell - 4);
+        }
+
+        drawLabel(`POANG ${this.score}`, 10, 14);
+        drawLabel(`REKORD ${this.highScore}`, 10, 27);
+
+        if (!this.running) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("GAME OVER", 154, 126, "#ff5d73");
+          drawLabel("SPACE FOR NY RUNDA", 96, 146, "#f0f4ff");
+        }
+      }
+    };
+
+    const blaster = {
+      title: "Space Blaster",
+      hint: "Pil vanster/hoger eller A/D. Space eller klick for att skjuta.",
+      highScore: 0,
+      running: true,
+      score: 0,
+      player: { x: 230, y: 244, w: 20, h: 14, left: false, right: false },
+      bullets: [],
+      enemies: [],
+      enemyDir: 1,
+      enemySpeed: 0.45,
+      fireCooldown: 0,
+      init() {
+        this.running = true;
+        this.score = 0;
+        this.player.x = canvas.width / 2 - this.player.w / 2;
+        this.player.left = false;
+        this.player.right = false;
+        this.bullets = [];
+        this.enemyDir = 1;
+        this.enemySpeed = 0.45;
+        this.fireCooldown = 0;
+        this.buildWave();
+      },
+      buildWave() {
+        this.enemies = [];
+        const rows = 4;
+        const cols = 9;
+        const gapX = 12;
+        const gapY = 10;
+        const w = 26;
+        const h = 14;
+        const totalW = cols * w + (cols - 1) * gapX;
+        const startX = (canvas.width - totalW) / 2;
+        for (let row = 0; row < rows; row += 1) {
+          for (let col = 0; col < cols; col += 1) {
+            this.enemies.push({
+              x: startX + col * (w + gapX),
+              y: 40 + row * (h + gapY),
+              w,
+              h
+            });
+          }
+        }
+      },
+      shoot() {
+        if (this.fireCooldown > 0 || !this.running) return;
+        this.bullets.push({
+          x: this.player.x + this.player.w / 2 - 1.5,
+          y: this.player.y - 8,
+          w: 3,
+          h: 8
+        });
+        this.fireCooldown = 8;
+      },
+      onKeyDown(code) {
+        if (code === "ArrowLeft" || code === "KeyA") this.player.left = true;
+        if (code === "ArrowRight" || code === "KeyD") this.player.right = true;
+        if (code === "Space") this.shoot();
+        if (!this.running && (code === "Space" || code === "Enter")) this.init();
+      },
+      onKeyUp(code) {
+        if (code === "ArrowLeft" || code === "KeyA") this.player.left = false;
+        if (code === "ArrowRight" || code === "KeyD") this.player.right = false;
+      },
+      onClick() {
+        if (!this.running) this.init();
+        else this.shoot();
+      },
+      update(dtScale) {
+        if (!this.running) return;
+
+        if (this.player.left) this.player.x -= 2.7 * dtScale;
+        if (this.player.right) this.player.x += 2.7 * dtScale;
+        this.player.x = clamp(this.player.x, 6, canvas.width - this.player.w - 6);
+
+        this.fireCooldown = Math.max(0, this.fireCooldown - dtScale);
+
+        for (const bullet of this.bullets) bullet.y -= 4.8 * dtScale;
+        this.bullets = this.bullets.filter((bullet) => bullet.y + bullet.h > -4);
+
+        let edgeHit = false;
+        for (const enemy of this.enemies) {
+          enemy.x += this.enemyDir * this.enemySpeed * dtScale;
+          if (enemy.x < 6 || enemy.x + enemy.w > canvas.width - 6) edgeHit = true;
+        }
+        if (edgeHit) {
+          this.enemyDir *= -1;
+          for (const enemy of this.enemies) enemy.y += 6;
+        }
+
+        for (let bi = this.bullets.length - 1; bi >= 0; bi -= 1) {
+          const bullet = this.bullets[bi];
+          let removed = false;
+          for (let ei = this.enemies.length - 1; ei >= 0; ei -= 1) {
+            const enemy = this.enemies[ei];
+            if (intersects(bullet, enemy)) {
+              this.bullets.splice(bi, 1);
+              this.enemies.splice(ei, 1);
+              this.score += 1;
+              this.highScore = Math.max(this.highScore, this.score);
+              removed = true;
+              break;
+            }
+          }
+          if (removed) continue;
+        }
+
+        if (this.enemies.length === 0) {
+          this.enemySpeed = Math.min(1.1, this.enemySpeed + 0.09);
+          this.buildWave();
+        }
+
+        if (this.enemies.some((enemy) => enemy.y + enemy.h >= this.player.y - 4)) {
+          this.running = false;
+        }
+      },
+      drawShip(x, y, w, h, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(x + 4), Math.round(y + 4), w - 8, h - 4);
+        ctx.fillRect(Math.round(x + w / 2 - 2), Math.round(y), 4, 4);
+        ctx.fillStyle = "#0b1020";
+        ctx.fillRect(Math.round(x + 2), Math.round(y + h - 3), 4, 3);
+        ctx.fillRect(Math.round(x + w - 6), Math.round(y + h - 3), 4, 3);
+      },
+      drawEnemy(enemy) {
+        ctx.fillStyle = "#ffbf46";
+        ctx.fillRect(Math.round(enemy.x), Math.round(enemy.y), enemy.w, enemy.h);
+        ctx.fillStyle = "#64350e";
+        ctx.fillRect(Math.round(enemy.x + 4), Math.round(enemy.y + 4), enemy.w - 8, 4);
+        ctx.fillRect(Math.round(enemy.x + 2), Math.round(enemy.y + enemy.h - 4), 4, 3);
+        ctx.fillRect(Math.round(enemy.x + enemy.w - 6), Math.round(enemy.y + enemy.h - 4), 4, 3);
+      },
+      draw() {
+        ctx.fillStyle = "#060d1a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < 48; i += 1) {
+          const x = (i * 73 + this.score * 3) % canvas.width;
+          const y = (i * 41 + this.score * 7) % 170;
+          ctx.fillStyle = i % 2 === 0 ? "#8fb7ff" : "#4f7fcf";
+          ctx.fillRect(Math.floor(x), Math.floor(y), 2, 2);
+        }
+
+        this.drawShip(this.player.x, this.player.y, this.player.w, this.player.h, "#38d9a9");
+        for (const bullet of this.bullets) {
+          ctx.fillStyle = "#f0f4ff";
+          ctx.fillRect(Math.round(bullet.x), Math.round(bullet.y), bullet.w, bullet.h);
+        }
+        for (const enemy of this.enemies) this.drawEnemy(enemy);
+
+        drawLabel(`POANG ${this.score}`, 10, 14);
+        drawLabel(`REKORD ${this.highScore}`, 10, 27);
+
+        if (!this.running) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("GAME OVER", 154, 126, "#ff5d73");
+          drawLabel("SPACE FOR NY RUNDA", 96, 146, "#f0f4ff");
+        }
+      }
+    };
+
+    const flappy = {
+      title: "Flappy Pixel",
+      hint: "Space, pil upp eller klick for att flyga.",
+      highScore: 0,
+      running: true,
+      score: 0,
+      bird: { x: 110, y: 132, w: 14, h: 11, vy: 0 },
+      pipes: [],
+      spawnTimer: 0,
+      spawnEvery: 62,
+      speed: 2.4,
+      gap: 72,
+      init() {
+        this.running = true;
+        this.score = 0;
+        this.bird.x = 110;
+        this.bird.y = 132;
+        this.bird.vy = 0;
+        this.pipes = [];
+        this.spawnTimer = 0;
+        this.spawnEvery = 62;
+        this.speed = 2.4;
+      },
+      flap() {
+        if (!this.running) {
+          this.init();
+          return;
+        }
+        this.bird.vy = -4.8;
+      },
+      onKeyDown(code) {
+        if (code === "Space" || code === "ArrowUp" || code === "KeyW") this.flap();
+      },
+      onClick() {
+        this.flap();
+      },
+      spawnPipe() {
+        const gapTop = 42 + Math.random() * 110;
+        this.pipes.push({
+          x: canvas.width + 8,
+          w: 28,
+          gapTop,
+          passed: false
+        });
+      },
+      update(dtScale) {
+        if (!this.running) return;
+
+        this.bird.vy += 0.34 * dtScale;
+        this.bird.y += this.bird.vy * dtScale;
+
+        if (this.bird.y < 0 || this.bird.y + this.bird.h > canvas.height) {
+          this.running = false;
+        }
+
+        this.spawnTimer += dtScale;
+        if (this.spawnTimer >= this.spawnEvery) {
+          this.spawnTimer = 0;
+          this.spawnPipe();
+          this.spawnEvery = Math.max(44, this.spawnEvery - 0.04);
+        }
+
+        this.speed = Math.min(4.3, this.speed + 0.0006 * dtScale);
+        for (const pipe of this.pipes) {
+          pipe.x -= this.speed * dtScale;
+          if (!pipe.passed && pipe.x + pipe.w < this.bird.x) {
+            pipe.passed = true;
+            this.score += 1;
+            this.highScore = Math.max(this.highScore, this.score);
+          }
+        }
+
+        this.pipes = this.pipes.filter((pipe) => pipe.x + pipe.w > -6);
+
+        const birdBox = this.bird;
+        for (const pipe of this.pipes) {
+          const topPipe = { x: pipe.x, y: 0, w: pipe.w, h: pipe.gapTop };
+          const bottomPipe = {
+            x: pipe.x,
+            y: pipe.gapTop + this.gap,
+            w: pipe.w,
+            h: canvas.height - (pipe.gapTop + this.gap)
+          };
+          if (intersects(birdBox, topPipe) || intersects(birdBox, bottomPipe)) {
+            this.running = false;
+            break;
+          }
+        }
+      },
+      drawPipe(x, y, w, h) {
+        ctx.fillStyle = "#29d391";
+        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+        ctx.fillStyle = "#19815a";
+        ctx.fillRect(Math.round(x + w - 5), Math.round(y), 5, Math.round(h));
+        ctx.fillStyle = "#61f2ba";
+        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), 3);
+      },
+      draw() {
+        ctx.fillStyle = "#4a89d6";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#87b8f0";
+        for (let i = 0; i < 6; i += 1) {
+          const cx = (i * 95 + (performance.now() * 0.03)) % (canvas.width + 70) - 70;
+          const cy = 24 + (i % 3) * 36;
+          ctx.fillRect(Math.round(cx), cy, 36, 10);
+          ctx.fillRect(Math.round(cx + 8), cy - 6, 22, 8);
+        }
+
+        for (const pipe of this.pipes) {
+          this.drawPipe(pipe.x, 0, pipe.w, pipe.gapTop);
+          this.drawPipe(pipe.x, pipe.gapTop + this.gap, pipe.w, canvas.height - (pipe.gapTop + this.gap));
+        }
+
+        ctx.fillStyle = "#ffcf52";
+        ctx.fillRect(Math.round(this.bird.x), Math.round(this.bird.y), this.bird.w, this.bird.h);
+        ctx.fillStyle = "#0a0f18";
+        ctx.fillRect(Math.round(this.bird.x + 8), Math.round(this.bird.y + 3), 3, 3);
+        ctx.fillStyle = "#ff8d5c";
+        ctx.fillRect(Math.round(this.bird.x + this.bird.w), Math.round(this.bird.y + 4), 4, 3);
+
+        drawLabel(`POANG ${this.score}`, 10, 14);
+        drawLabel(`REKORD ${this.highScore}`, 10, 27);
+
+        if (!this.running) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("GAME OVER", 154, 126, "#ff5d73");
+          drawLabel("KLICKA ELLER SPACE", 96, 146, "#f0f4ff");
+        }
+      }
+    };
+
+    const fifa = {
+      title: "Pixel Football 3D",
+      hint: "FIFA-vinkel: WASD/pilar ror din spelare. E passar med boll, Q valjer narmast boll, F byter kamera.",
+      field: { w: 44, l: 68, goalW: 12 },
+      scoreA: 0,
+      scoreB: 0,
+      matchOver: false,
+      winner: "",
+      kickoffTimer: 0,
+      cameraMode: "front",
+      controlledId: 0,
+      ball: { x: 0, y: 0.34, z: 0, vx: 0, vy: 0, vz: 0, ownerId: -1, lastTouchTeam: 0 },
+      camera: { x: 0, y: 31, z: -46, yaw: 0, pitch: -0.53, focal: 250 },
+      keys: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        sprint: false
+      },
+      players: [],
+      init() {
+        this.scoreA = 0;
+        this.scoreB = 0;
+        this.matchOver = false;
+        this.winner = "";
+        this.cameraMode = "front";
+        this.players = [];
+        this.createPlayers();
+        this.resetKickoff(0);
+      },
+      createPlayers() {
+        const teamA = [
+          [-9, -11], [0, -13], [9, -11], [-12, 7], [0, 8], [12, 7]
+        ];
+        const teamB = teamA.map((p) => [p[0], -p[1]]);
+        let id = 0;
+        for (const point of teamA) {
+          this.players.push({
+            id,
+            team: 0,
+            x: point[0],
+            z: point[1],
+            y: 0,
+            vx: 0,
+            vz: 0,
+            yaw: 0,
+            homeX: point[0],
+            homeZ: point[1],
+            radius: 0.7
+          });
+          id += 1;
+        }
+        for (const point of teamB) {
+          this.players.push({
+            id,
+            team: 1,
+            x: point[0],
+            z: point[1],
+            y: 0,
+            vx: 0,
+            vz: 0,
+            yaw: Math.PI,
+            homeX: point[0],
+            homeZ: point[1],
+            radius: 0.7
+          });
+          id += 1;
+        }
+      },
+      resetKickoff(servingTeam) {
+        for (const p of this.players) {
+          p.x = p.homeX;
+          p.z = p.homeZ;
+          p.vx = 0;
+          p.vz = 0;
+          p.yaw = p.team === 0 ? 0 : Math.PI;
+        }
+        this.ball.x = 0;
+        this.ball.y = 0.34;
+        this.ball.z = 0;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
+        this.ball.vz = 0;
+        this.kickoffTimer = 45;
+
+        const owner = servingTeam === 0 ? this.controlledId : 6;
+        this.ball.ownerId = owner;
+        this.ball.lastTouchTeam = servingTeam;
+
+        const p = this.players[owner];
+        if (p) {
+          if (this.cameraMode === "side") {
+            this.camera.x = -50;
+            this.camera.z = 0;
+            this.camera.y = 28;
+            this.camera.yaw = Math.PI * 0.5;
+            this.camera.pitch = -0.49;
+            this.camera.focal = 235;
+          } else {
+            this.camera.x = 0;
+            this.camera.z = -54;
+            this.camera.y = 29;
+            this.camera.yaw = 0;
+            this.camera.pitch = -0.51;
+            this.camera.focal = 240;
+          }
+        }
+      },
+      onKeyDown(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.up = true;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.down = true;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = true;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = true;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = true;
+        if (code === "KeyF") this.toggleCameraMode();
+        if (code === "KeyE" && this.ourTeamHasBall()) this.passBall();
+        if (code === "KeyQ" && !this.ourTeamHasBall()) this.switchToNearestBallPlayer();
+        if (code === "Space") this.shootBall();
+        if (code === "Enter" && this.matchOver) this.init();
+      },
+      onKeyUp(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.up = false;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.down = false;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = false;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = false;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = false;
+      },
+      onClick() {
+        if (this.matchOver) this.init();
+        else this.shootBall();
+      },
+      controlledPlayer() {
+        return this.players[this.controlledId];
+      },
+      ourTeamHasBall() {
+        const ownerId = this.ball.ownerId;
+        if (ownerId < 0) return false;
+        const owner = this.players[ownerId];
+        return Boolean(owner && owner.team === 0);
+      },
+      switchToNearestBallPlayer() {
+        let best = null;
+        let bestDist = Infinity;
+        for (const p of this.players) {
+          if (p.team !== 0) continue;
+          const dist = Math.hypot(p.x - this.ball.x, p.z - this.ball.z);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = p;
+          }
+        }
+        if (best) this.controlledId = best.id;
+      },
+      toggleCameraMode() {
+        this.cameraMode = this.cameraMode === "front" ? "side" : "front";
+      },
+      syncControlledToBallOwner() {
+        const ownerId = this.ball.ownerId;
+        if (ownerId < 0) return;
+        const owner = this.players[ownerId];
+        if (owner && owner.team === 0) this.controlledId = ownerId;
+      },
+      toCamera(wx, wy, wz) {
+        const dx = wx - this.camera.x;
+        const dy = wy - this.camera.y;
+        const dz = wz - this.camera.z;
+        const cos = Math.cos(this.camera.yaw);
+        const sin = Math.sin(this.camera.yaw);
+        const xr = dx * cos - dz * sin;
+        const zr = dx * sin + dz * cos;
+        const cp = Math.cos(this.camera.pitch);
+        const sp = Math.sin(this.camera.pitch);
+        return {
+          x: xr,
+          y: dy * cp - zr * sp,
+          z: dy * sp + zr * cp
+        };
+      },
+      project(cam) {
+        if (cam.z <= 0.1) return null;
+        return {
+          x: canvas.width * 0.5 + (cam.x / cam.z) * this.camera.focal,
+          y: canvas.height * 0.57 - (cam.y / cam.z) * this.camera.focal
+        };
+      },
+      pushQuad(list, a, b, c, d, color) {
+        const cam = [
+          this.toCamera(a[0], a[1], a[2]),
+          this.toCamera(b[0], b[1], b[2]),
+          this.toCamera(c[0], c[1], c[2]),
+          this.toCamera(d[0], d[1], d[2])
+        ];
+        if (cam.some((p) => p.z <= 0.1)) return;
+        const pts = cam.map((p) => this.project(p));
+        if (pts.some((p) => !p)) return;
+        const depth = (cam[0].z + cam[1].z + cam[2].z + cam[3].z) * 0.25;
+        list.push({ pts, depth, color });
+      },
+      pushBoxFaces(list, box) {
+        const hx = box.w * 0.5;
+        const hz = box.d * 0.5;
+        const verts = [
+          [box.x - hx, box.y, box.z - hz], [box.x + hx, box.y, box.z - hz], [box.x + hx, box.y, box.z + hz], [box.x - hx, box.y, box.z + hz],
+          [box.x - hx, box.y + box.h, box.z - hz], [box.x + hx, box.y + box.h, box.z - hz], [box.x + hx, box.y + box.h, box.z + hz], [box.x - hx, box.y + box.h, box.z + hz]
+        ];
+        const cam = verts.map((v) => this.toCamera(v[0], v[1], v[2]));
+        if (cam.every((v) => v.z <= 0.1)) return;
+        const faces = [
+          { idx: [0, 1, 5, 4], color: box.c1 },
+          { idx: [1, 2, 6, 5], color: box.c2 },
+          { idx: [2, 3, 7, 6], color: box.c1 },
+          { idx: [3, 0, 4, 7], color: box.c2 },
+          { idx: [4, 5, 6, 7], color: box.c3 }
+        ];
+        for (const face of faces) {
+          if (face.idx.every((i) => cam[i].z <= 0.1)) continue;
+          const pts = face.idx.map((i) => {
+            const c = cam[i];
+            return this.project({
+              x: c.x,
+              y: c.y,
+              z: Math.max(c.z, 0.12)
+            });
+          });
+          if (pts.some((p) => !p)) continue;
+          const depth = face.idx.reduce((acc, i) => acc + Math.max(cam[i].z, 0.12), 0) / face.idx.length;
+          list.push({ pts, depth, color: face.color });
+        }
+      },
+      drawLine3D(a, b, color, width = 1) {
+        const pa = this.project(this.toCamera(a[0], a[1], a[2]));
+        const pb = this.project(this.toCamera(b[0], b[1], b[2]));
+        if (!pa || !pb) return;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.stroke();
+      },
+      passBall() {
+        if (this.matchOver || this.ball.ownerId !== this.controlledId) return;
+        const owner = this.controlledPlayer();
+        let target = null;
+        let best = Infinity;
+        for (const mate of this.players) {
+          if (mate.team !== owner.team || mate.id === owner.id) continue;
+          const dz = mate.z - owner.z;
+          if (dz < -2) continue;
+          const dist = Math.hypot(mate.x - owner.x, mate.z - owner.z);
+          if (dist < best) {
+            best = dist;
+            target = mate;
+          }
+        }
+        if (!target) return;
+        const dx = target.x - owner.x;
+        const dz = target.z - owner.z + 1.4;
+        const inv = 1 / Math.max(0.001, Math.hypot(dx, dz));
+        this.ball.ownerId = -1;
+        this.ball.vx = dx * inv * 0.72;
+        this.ball.vz = dz * inv * 0.72;
+        this.ball.vy = 0.09;
+        this.ball.lastTouchTeam = owner.team;
+      },
+      shootBall() {
+        if (this.matchOver) return;
+        const owner = this.controlledPlayer();
+        if (this.ball.ownerId === this.controlledId) {
+          const goalX = clamp(owner.x * 0.18, -5, 5);
+          const goalZ = this.field.l * 0.5 + 4;
+          const dx = goalX - owner.x;
+          const dz = goalZ - owner.z;
+          const inv = 1 / Math.max(0.001, Math.hypot(dx, dz));
+          const power = this.keys.sprint ? 1.08 : 0.92;
+          this.ball.ownerId = -1;
+          this.ball.vx = dx * inv * power;
+          this.ball.vz = dz * inv * power;
+          this.ball.vy = 0.12;
+          this.ball.lastTouchTeam = owner.team;
+          return;
+        }
+
+        if (this.ball.ownerId === -1) {
+          const dist = Math.hypot(this.ball.x - owner.x, this.ball.z - owner.z);
+          if (dist < 2.2 && this.ball.y < 1.2) {
+            const dx = Math.sin(owner.yaw);
+            const dz = Math.cos(owner.yaw);
+            this.ball.vx = dx * 0.86;
+            this.ball.vz = dz * 0.86;
+            this.ball.vy = 0.1;
+            this.ball.lastTouchTeam = owner.team;
+          }
+        }
+      },
+      steerPlayer(player, tx, tz, maxSpeed, dtScale) {
+        const dx = tx - player.x;
+        const dz = tz - player.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.001) {
+          const nx = dx / dist;
+          const nz = dz / dist;
+          player.vx += nx * 0.014 * dtScale;
+          player.vz += nz * 0.014 * dtScale;
+        }
+        const sp = Math.hypot(player.vx, player.vz);
+        if (sp > maxSpeed) {
+          const mul = maxSpeed / sp;
+          player.vx *= mul;
+          player.vz *= mul;
+        }
+      },
+      updateControlled(dtScale) {
+        const p = this.controlledPlayer();
+        const inputX = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+        const inputZ = (this.keys.up ? 1 : 0) - (this.keys.down ? 1 : 0);
+        let worldX = inputX;
+        let worldZ = inputZ;
+        if (this.cameraMode === "side") {
+          // In side camera mode, map controls to screen-space directions.
+          const yaw = this.camera.yaw;
+          const rightX = Math.cos(yaw);
+          const rightZ = -Math.sin(yaw);
+          const upX = Math.sin(yaw);
+          const upZ = Math.cos(yaw);
+          worldX = rightX * inputX + upX * inputZ;
+          worldZ = rightZ * inputX + upZ * inputZ;
+        }
+        const len = Math.hypot(worldX, worldZ) || 1;
+        const nx = worldX / len;
+        const nz = worldZ / len;
+        const topSpeed = this.keys.sprint ? 0.2 : 0.145;
+
+        p.vx += nx * 0.02 * dtScale;
+        p.vz += nz * 0.02 * dtScale;
+        const sp = Math.hypot(p.vx, p.vz);
+        if (sp > topSpeed) {
+          const m = topSpeed / sp;
+          p.vx *= m;
+          p.vz *= m;
+        }
+      },
+      updateAI(dtScale) {
+        const ball = this.ball;
+        for (const p of this.players) {
+          if (p.id === this.controlledId) continue;
+          let tx = p.homeX;
+          let tz = p.homeZ;
+          const ballDist = Math.hypot(ball.x - p.x, ball.z - p.z);
+          const owner = ball.ownerId >= 0 ? this.players[ball.ownerId] : null;
+
+          if (ball.ownerId === p.id) {
+            tx = p.x + (p.team === 0 ? 0.6 : -0.6);
+            tz = p.z + (p.team === 0 ? 1.4 : -1.4);
+            const nearGoal = p.team === 0 ? p.z > this.field.l * 0.5 - 11 : p.z < -this.field.l * 0.5 + 11;
+            if (nearGoal) {
+              const gx = clamp(p.x * 0.2, -4, 4);
+              const gz = p.team === 0 ? this.field.l * 0.5 + 4 : -this.field.l * 0.5 - 4;
+              const dx = gx - p.x;
+              const dz = gz - p.z;
+              const inv = 1 / Math.max(0.001, Math.hypot(dx, dz));
+              ball.ownerId = -1;
+              ball.vx = dx * inv * 0.82;
+              ball.vz = dz * inv * 0.82;
+              ball.vy = 0.08;
+              ball.lastTouchTeam = p.team;
+            }
+          } else if (!owner || owner.team !== p.team) {
+            if (ballDist < 14) {
+              tx = ball.x;
+              tz = ball.z;
+            }
+          } else {
+            tx = p.homeX + (owner.x - p.homeX) * 0.3;
+            tz = p.homeZ + (owner.z - p.homeZ) * 0.3;
+          }
+
+          const maxSpeed = p.team === 0 ? 0.13 : 0.12;
+          this.steerPlayer(p, tx, tz, maxSpeed, dtScale);
+        }
+      },
+      updatePlayers(dtScale) {
+        const xLimit = this.field.w * 0.5 + 3.5;
+        const zLimit = this.field.l * 0.5 + 5;
+        for (const p of this.players) {
+          p.vx *= Math.pow(0.9, dtScale);
+          p.vz *= Math.pow(0.9, dtScale);
+          p.x = clamp(p.x + p.vx * dtScale, -xLimit, xLimit);
+          p.z = clamp(p.z + p.vz * dtScale, -zLimit, zLimit);
+          if (Math.hypot(p.vx, p.vz) > 0.004) p.yaw = Math.atan2(p.vx, p.vz);
+        }
+      },
+      updateBall(dtScale) {
+        const ball = this.ball;
+        const owner = ball.ownerId >= 0 ? this.players[ball.ownerId] : null;
+
+        if (owner) {
+          const fx = Math.sin(owner.yaw);
+          const fz = Math.cos(owner.yaw);
+          ball.x = owner.x + fx * 0.85;
+          ball.z = owner.z + fz * 0.85;
+          ball.y = 0.34 + Math.sin(performance.now() * 0.02 + owner.id) * 0.02;
+          ball.vx = owner.vx;
+          ball.vz = owner.vz;
+
+          if (this.kickoffTimer <= 0) {
+            for (const p of this.players) {
+              if (p.team === owner.team) continue;
+              const dist = Math.hypot(p.x - owner.x, p.z - owner.z);
+              if (dist < 0.85 && Math.random() < 0.016 * dtScale) {
+                ball.ownerId = p.id;
+                ball.lastTouchTeam = p.team;
+                break;
+              }
+            }
+          }
+          return;
+        }
+
+        ball.vy -= 0.018 * dtScale;
+        ball.x += ball.vx * dtScale;
+        ball.z += ball.vz * dtScale;
+        ball.y += ball.vy * dtScale;
+        if (ball.y < 0.28) {
+          ball.y = 0.28;
+          ball.vy *= -0.45;
+          if (Math.abs(ball.vy) < 0.02) ball.vy = 0;
+        }
+
+        ball.vx *= Math.pow(0.986, dtScale);
+        ball.vz *= Math.pow(0.986, dtScale);
+
+        const xLimit = this.field.w * 0.5 + 1.4;
+        if (ball.x < -xLimit || ball.x > xLimit) {
+          ball.x = clamp(ball.x, -xLimit, xLimit);
+          ball.vx *= -0.6;
+        }
+
+        for (const p of this.players) {
+          const dist = Math.hypot(ball.x - p.x, ball.z - p.z);
+          if (dist < 0.92 && ball.y < 1.05 && this.kickoffTimer <= 0) {
+            ball.ownerId = p.id;
+            ball.lastTouchTeam = p.team;
+            ball.vx = 0;
+            ball.vz = 0;
+            break;
+          }
+        }
+      },
+      checkGoal() {
+        const goalHalf = this.field.goalW * 0.5;
+        const ball = this.ball;
+        const top = this.field.l * 0.5 + 0.9;
+        const bottom = -this.field.l * 0.5 - 0.9;
+
+        if (ball.z > top && Math.abs(ball.x) < goalHalf && ball.y < 2.2) {
+          this.scoreA += 1;
+          if (this.scoreA >= 3) {
+            this.matchOver = true;
+            this.winner = "RODA";
+          }
+          this.resetKickoff(1);
+          return;
+        }
+        if (ball.z < bottom && Math.abs(ball.x) < goalHalf && ball.y < 2.2) {
+          this.scoreB += 1;
+          if (this.scoreB >= 3) {
+            this.matchOver = true;
+            this.winner = "BLA";
+          }
+          this.resetKickoff(0);
+          return;
+        }
+
+        if (ball.z > top && Math.abs(ball.x) >= goalHalf) {
+          ball.z = top;
+          ball.vz *= -0.58;
+        }
+        if (ball.z < bottom && Math.abs(ball.x) >= goalHalf) {
+          ball.z = bottom;
+          ball.vz *= -0.58;
+        }
+      },
+      updateCamera(dtScale) {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minZ = Infinity;
+        let maxZ = -Infinity;
+        for (const pl of this.players) {
+          minX = Math.min(minX, pl.x);
+          maxX = Math.max(maxX, pl.x);
+          minZ = Math.min(minZ, pl.z);
+          maxZ = Math.max(maxZ, pl.z);
+        }
+        minX = Math.min(minX, this.ball.x);
+        maxX = Math.max(maxX, this.ball.x);
+        minZ = Math.min(minZ, this.ball.z);
+        maxZ = Math.max(maxZ, this.ball.z);
+
+        const centerX = (minX + maxX) * 0.5;
+        const centerZ = (minZ + maxZ) * 0.5;
+        const spanX = maxX - minX;
+        const spanZ = maxZ - minZ;
+        const sideMode = this.cameraMode === "side";
+        const targetX = sideMode ? -50 : clamp(centerX * 0.24, -6, 6);
+        const targetZ = sideMode ? clamp(centerZ * 0.24, -5, 5) : clamp(-54 + centerZ * 0.1, -57, -51);
+        const targetY = sideMode ? 28 + spanX * 0.03 : 29 + spanZ * 0.022;
+        const targetYaw = sideMode ? Math.PI * 0.5 : 0;
+        const targetPitch = sideMode ? -0.49 : -0.51;
+        const targetFocal = sideMode
+          ? clamp(242 - spanZ * 0.45, 200, 248)
+          : clamp(248 - spanX * 0.5 - spanZ * 0.22, 195, 255);
+        const posLerp = sideMode ? 0.08 : 0.07;
+
+        this.camera.x += (targetX - this.camera.x) * posLerp * dtScale;
+        this.camera.z += (targetZ - this.camera.z) * posLerp * dtScale;
+        this.camera.y += (targetY - this.camera.y) * 0.07 * dtScale;
+        const yawDiff = normalizeAngle(targetYaw - this.camera.yaw);
+        this.camera.yaw = normalizeAngle(this.camera.yaw + yawDiff * 0.09 * dtScale);
+        this.camera.pitch += (targetPitch - this.camera.pitch) * 0.06 * dtScale;
+        this.camera.focal += (targetFocal - this.camera.focal) * 0.09 * dtScale;
+      },
+      pushPitch(drawList) {
+        const w = this.field.w * 0.5;
+        const l = this.field.l * 0.5;
+        const segments = 14;
+        for (let i = 0; i < segments; i += 1) {
+          const z0 = -l + (i / segments) * this.field.l;
+          const z1 = -l + ((i + 1) / segments) * this.field.l;
+          const color = i % 2 === 0 ? "#2f935e" : "#2a8957";
+          this.pushQuad(drawList, [-w, 0, z0], [w, 0, z0], [w, 0, z1], [-w, 0, z1], color);
+        }
+
+        const postW = 0.34;
+        const postH = 2.5;
+        const goalDepth = 2.3;
+        this.pushBoxFaces(drawList, { x: -this.field.goalW * 0.5, y: 0, z: l + goalDepth * 0.5, w: postW, d: goalDepth, h: postH, c1: "#eff6ff", c2: "#dbe8ff", c3: "#ffffff" });
+        this.pushBoxFaces(drawList, { x: this.field.goalW * 0.5, y: 0, z: l + goalDepth * 0.5, w: postW, d: goalDepth, h: postH, c1: "#eff6ff", c2: "#dbe8ff", c3: "#ffffff" });
+        this.pushBoxFaces(drawList, { x: 0, y: postH - 0.28, z: l + goalDepth * 0.5, w: this.field.goalW + 0.35, d: goalDepth, h: 0.28, c1: "#eff6ff", c2: "#dbe8ff", c3: "#ffffff" });
+
+        this.pushBoxFaces(drawList, { x: -this.field.goalW * 0.5, y: 0, z: -l - goalDepth * 0.5, w: postW, d: goalDepth, h: postH, c1: "#eff6ff", c2: "#dbe8ff", c3: "#ffffff" });
+        this.pushBoxFaces(drawList, { x: this.field.goalW * 0.5, y: 0, z: -l - goalDepth * 0.5, w: postW, d: goalDepth, h: postH, c1: "#eff6ff", c2: "#dbe8ff", c3: "#ffffff" });
+        this.pushBoxFaces(drawList, { x: 0, y: postH - 0.28, z: -l - goalDepth * 0.5, w: this.field.goalW + 0.35, d: goalDepth, h: 0.28, c1: "#eff6ff", c2: "#dbe8ff", c3: "#ffffff" });
+      },
+      drawPitchLines() {
+        const w = this.field.w * 0.5;
+        const l = this.field.l * 0.5;
+        const line = "#eaf6ff";
+        this.drawLine3D([-w, 0.03, -l], [w, 0.03, -l], line, 2);
+        this.drawLine3D([w, 0.03, -l], [w, 0.03, l], line, 2);
+        this.drawLine3D([w, 0.03, l], [-w, 0.03, l], line, 2);
+        this.drawLine3D([-w, 0.03, l], [-w, 0.03, -l], line, 2);
+        this.drawLine3D([-w, 0.03, 0], [w, 0.03, 0], line, 2);
+
+        const boxW = 16;
+        const boxD = 8;
+        this.drawLine3D([-boxW * 0.5, 0.03, l], [boxW * 0.5, 0.03, l], line, 2);
+        this.drawLine3D([-boxW * 0.5, 0.03, l], [-boxW * 0.5, 0.03, l - boxD], line, 2);
+        this.drawLine3D([boxW * 0.5, 0.03, l], [boxW * 0.5, 0.03, l - boxD], line, 2);
+        this.drawLine3D([-boxW * 0.5, 0.03, l - boxD], [boxW * 0.5, 0.03, l - boxD], line, 2);
+        this.drawLine3D([-boxW * 0.5, 0.03, -l], [boxW * 0.5, 0.03, -l], line, 2);
+        this.drawLine3D([-boxW * 0.5, 0.03, -l], [-boxW * 0.5, 0.03, -l + boxD], line, 2);
+        this.drawLine3D([boxW * 0.5, 0.03, -l], [boxW * 0.5, 0.03, -l + boxD], line, 2);
+        this.drawLine3D([-boxW * 0.5, 0.03, -l + boxD], [boxW * 0.5, 0.03, -l + boxD], line, 2);
+
+        const r = 4.5;
+        const steps = 28;
+        for (let i = 0; i < steps; i += 1) {
+          const a0 = (i / steps) * Math.PI * 2;
+          const a1 = ((i + 1) / steps) * Math.PI * 2;
+          this.drawLine3D([Math.cos(a0) * r, 0.03, Math.sin(a0) * r], [Math.cos(a1) * r, 0.03, Math.sin(a1) * r], line, 1.6);
+        }
+      },
+      pushPlayers(drawList) {
+        for (const p of this.players) {
+          const controlled = p.id === this.controlledId;
+          const teamMain = p.team === 0 ? "#d74444" : "#3452d4";
+          const teamAlt = p.team === 0 ? "#a72c2c" : "#263ea5";
+          this.pushBoxFaces(drawList, { x: p.x, y: 0.05, z: p.z, w: 0.9, d: 0.6, h: 1.18, c1: teamMain, c2: teamAlt, c3: controlled ? "#ffd369" : "#f0f0f0" });
+          this.pushBoxFaces(drawList, { x: p.x, y: 1.2, z: p.z, w: 0.5, d: 0.5, h: 0.38, c1: "#f2d7c0", c2: "#d3b59b", c3: "#f7e3d2" });
+          this.pushBoxFaces(drawList, { x: p.x - 0.24, y: 0.02, z: p.z + 0.08, w: 0.2, d: 0.2, h: 0.16, c1: "#111a2b", c2: "#111a2b", c3: "#1d2740" });
+          this.pushBoxFaces(drawList, { x: p.x + 0.24, y: 0.02, z: p.z + 0.08, w: 0.2, d: 0.2, h: 0.16, c1: "#111a2b", c2: "#111a2b", c3: "#1d2740" });
+        }
+      },
+      pushBall(drawList) {
+        this.pushBoxFaces(drawList, { x: this.ball.x, y: this.ball.y - 0.2, z: this.ball.z, w: 0.42, d: 0.42, h: 0.42, c1: "#f7fbff", c2: "#dce6f7", c3: "#ffffff" });
+      },
+      drawControlledArrow() {
+        const p = this.controlledPlayer();
+        if (!p) return;
+        const anchor = this.project(this.toCamera(p.x, 2.05, p.z));
+        if (!anchor) return;
+        const arrowX = clamp(anchor.x, 18, canvas.width - 18);
+        const arrowAnchorY = clamp(anchor.y, 24, canvas.height - 12);
+        const bob = Math.sin(performance.now() * 0.012) * 2.2;
+        const baseY = arrowAnchorY - 30 + bob;
+        const size = 14;
+        const tipX = arrowX;
+        const tipY = baseY + size;
+        const leftX = arrowX - size * 0.68;
+        const leftY = baseY;
+        const rightX = arrowX + size * 0.68;
+        const rightY = baseY;
+
+        ctx.fillStyle = "#ffe36f";
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(leftX, leftY);
+        ctx.lineTo(rightX, rightY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#1f1400";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.strokeStyle = "#1f1400";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(arrowX, tipY);
+        ctx.lineTo(arrowX, arrowAnchorY - 6);
+        ctx.stroke();
+
+        const feet = this.project(this.toCamera(p.x, 1.0, p.z));
+        if (feet) {
+          ctx.strokeStyle = "#ffea7d";
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.arc(feet.x, feet.y, 7, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = "#2a1b00";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(feet.x, feet.y, 9, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      },
+      drawHud() {
+        drawLabel(`ROD ${this.scoreA} - ${this.scoreB} BLA`, 10, 14, "#f0f4ff");
+        drawLabel(`DU: TEAM ROD`, 10, 27, "#ffd8d8");
+        drawLabel(`E PASS | Q BYT FORSVAR | F KAMERA`, 10, 40, "#d8e6ff");
+        drawLabel(`KAMERA ${this.cameraMode === "front" ? "FRAM" : "SIDA"}`, 10, 53, "#ffefbf");
+        if (this.kickoffTimer > 0 && !this.matchOver) {
+          drawLabel("KICKOFF", 198, 20, "#ffbf46");
+        }
+        if (this.matchOver) {
+          ctx.fillStyle = "rgba(0,0,0,0.65)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel(`VINNARE ${this.winner} TEAM`, 110, 126, "#ffbf46");
+          drawLabel("PRESS ENTER OR CLICK", 94, 146, "#f0f4ff");
+        }
+      },
+      update(dtScale) {
+        if (this.kickoffTimer > 0) this.kickoffTimer = Math.max(0, this.kickoffTimer - dtScale);
+        this.syncControlledToBallOwner();
+        if (this.matchOver) {
+          this.updateCamera(dtScale);
+          return;
+        }
+        this.updateControlled(dtScale);
+        this.updateAI(dtScale);
+        this.updatePlayers(dtScale);
+        this.updateBall(dtScale);
+        this.syncControlledToBallOwner();
+        this.checkGoal();
+        this.updateCamera(dtScale);
+      },
+      draw() {
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#71b4ff");
+        sky.addColorStop(0.56, "#96caff");
+        sky.addColorStop(1, "#b8ddff");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#1f6f4a";
+        ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5);
+
+        const pitchList = [];
+        this.pushPitch(pitchList);
+        pitchList.sort((a, b) => b.depth - a.depth);
+        for (const poly of pitchList) {
+          ctx.fillStyle = poly.color;
+          ctx.beginPath();
+          ctx.moveTo(poly.pts[0].x, poly.pts[0].y);
+          for (let i = 1; i < poly.pts.length; i += 1) ctx.lineTo(poly.pts[i].x, poly.pts[i].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "rgba(0,0,0,0.14)";
+          ctx.stroke();
+        }
+
+        const entityList = [];
+        this.pushPlayers(entityList);
+        this.pushBall(entityList);
+        entityList.sort((a, b) => b.depth - a.depth);
+        for (const poly of entityList) {
+          ctx.fillStyle = poly.color;
+          ctx.beginPath();
+          ctx.moveTo(poly.pts[0].x, poly.pts[0].y);
+          for (let i = 1; i < poly.pts.length; i += 1) ctx.lineTo(poly.pts[i].x, poly.pts[i].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "rgba(0,0,0,0.16)";
+          ctx.stroke();
+        }
+
+        this.drawPitchLines();
+        this.drawControlledArrow();
+        this.drawHud();
+      }
+    };
+
+    const zombiefps = {
+      title: "Zombie Siege FPS",
+      hint: "Setup: 1/2/3 lage, Q/E byter bana, Enter start. Ingame: WASD, mus siktar, klick/Space skjut, 1/2 vapen, G granat.",
+      state: "setup",
+      modeIndex: 0,
+      modeNames: ["SINGLEPLAYER", "ONLINE HOST", "ONLINE JOIN"],
+      mapIndex: 0,
+      maps: [
+        {
+          name: "Bunker Yard",
+          bounds: { minX: -24, maxX: 24, minZ: -24, maxZ: 24 },
+          sky1: "#4a607f",
+          sky2: "#8ea6c5",
+          ground: "#56694f",
+          playerSpawns: [[-4, -17], [4, -17]],
+          zombieSpawns: [[-20, 20], [20, 20], [0, 22], [-18, 3], [18, 3]],
+          blocks: [
+            { x: 0, z: 0, r: 4 },
+            { x: -12, z: -4, r: 3 },
+            { x: 12, z: -4, r: 3 },
+            { x: 0, z: 12, r: 4.5 }
+          ]
+        },
+        {
+          name: "City Cross",
+          bounds: { minX: -28, maxX: 28, minZ: -28, maxZ: 28 },
+          sky1: "#526381",
+          sky2: "#9cb2cb",
+          ground: "#4e5f48",
+          playerSpawns: [[-6, -19], [6, -19]],
+          zombieSpawns: [[-23, 24], [23, 24], [0, 25], [-24, -2], [24, -2]],
+          blocks: [
+            { x: 0, z: 0, r: 3.5 },
+            { x: -15, z: 10, r: 4 },
+            { x: 15, z: 10, r: 4 },
+            { x: -16, z: -12, r: 3 },
+            { x: 16, z: -12, r: 3 }
+          ]
+        },
+        {
+          name: "Lab Block",
+          bounds: { minX: -22, maxX: 22, minZ: -30, maxZ: 22 },
+          sky1: "#455879",
+          sky2: "#869ec1",
+          ground: "#45574b",
+          playerSpawns: [[-4, -22], [4, -22]],
+          zombieSpawns: [[-19, 17], [19, 17], [0, 20], [-20, -4], [20, -4]],
+          blocks: [
+            { x: 0, z: -2, r: 3.5 },
+            { x: -10, z: 8, r: 2.8 },
+            { x: 10, z: 8, r: 2.8 },
+            { x: -12, z: -14, r: 3 },
+            { x: 12, z: -14, r: 3 }
+          ]
+        }
+      ],
+      keys: { up: false, down: false, left: false, right: false, sprint: false, fire: false },
+      localWeapon: 0,
+      localGrenadePulse: 0,
+      playerIndex: 0,
+      players: [],
+      zombies: [],
+      grenades: [],
+      wave: 1,
+      score: 0,
+      zombieQueue: 0,
+      spawnTimer: 0,
+      nextWaveTimer: 0,
+      net: { role: "none", pc: null, dc: null, connected: false, connecting: false, remoteInput: null, sendTimer: 0 },
+      init() {
+        this.closeNetwork();
+        this.state = "setup";
+        this.modeIndex = 0;
+        this.mapIndex = 0;
+        this.players = [];
+        this.zombies = [];
+        this.grenades = [];
+        this.wave = 1;
+        this.score = 0;
+        this.zombieQueue = 0;
+        this.spawnTimer = 0;
+        this.nextWaveTimer = 0;
+        this.playerIndex = 0;
+        this.localWeapon = 0;
+        this.localGrenadePulse = 0;
+        this.keys = { up: false, down: false, left: false, right: false, sprint: false, fire: false };
+        this.net.remoteInput = this.emptyInput();
+      },
+      emptyInput() {
+        return { up: false, down: false, left: false, right: false, sprint: false, fire: false, weapon: 0, grenadePulse: 0, yaw: 0, pitch: 0 };
+      },
+      currentMap() {
+        return this.maps[this.mapIndex];
+      },
+      localPlayer() {
+        return this.players[this.playerIndex];
+      },
+      onKeyDown(code) {
+        if (this.state === "setup") {
+          if (code === "Digit1") this.modeIndex = 0;
+          if (code === "Digit2") this.modeIndex = 1;
+          if (code === "Digit3") this.modeIndex = 2;
+          if (code === "KeyQ" || code === "ArrowLeft") this.mapIndex = (this.mapIndex - 1 + this.maps.length) % this.maps.length;
+          if (code === "KeyE" || code === "ArrowRight" || code === "Tab") this.mapIndex = (this.mapIndex + 1) % this.maps.length;
+          if (code === "Enter") this.startMode();
+          return;
+        }
+        if (this.state === "gameover") {
+          if (code === "Enter" || code === "Space") this.init();
+          return;
+        }
+        if (this.state !== "playing" && this.state !== "waiting") return;
+        if (code === "KeyW" || code === "ArrowUp") this.keys.up = true;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.down = true;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = true;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = true;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = true;
+        if (code === "Digit1") this.localWeapon = 0;
+        if (code === "Digit2") this.localWeapon = 1;
+        if (code === "KeyG") this.localGrenadePulse += 1;
+      },
+      onKeyUp(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.up = false;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.down = false;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = false;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = false;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = false;
+      },
+      onMouseDown(e) {
+        if (e.button === 0) this.keys.fire = true;
+      },
+      onMouseUp(e) {
+        if (e.button === 0) this.keys.fire = false;
+      },
+      onMouseLeave() {
+        this.keys.fire = false;
+      },
+      onClick() {
+        if (this.state === "setup") this.startMode();
+      },
+      onLook(dx, dy) {
+        if (this.state !== "playing" && this.state !== "waiting") return;
+        const p = this.localPlayer();
+        if (!p) return;
+        const sens = 0.0026;
+        p.yaw = normalizeAngle(p.yaw + dx * sens);
+        p.pitch = clamp(p.pitch - dy * sens, -0.95, 0.72);
+      },
+      startMode() {
+        if (this.net.connecting) return;
+        if (this.modeIndex === 0) {
+          this.beginMatch(1);
+          return;
+        }
+        this.startOnline(this.modeIndex === 1 ? "host" : "join");
+      },
+      beginMatch(playerCount) {
+        const map = this.currentMap();
+        this.state = "playing";
+        this.players = [];
+        this.zombies = [];
+        this.grenades = [];
+        this.score = 0;
+        this.playerIndex = this.net.role === "guest" ? 1 : 0;
+        this.localWeapon = 0;
+        this.localGrenadePulse = 0;
+        for (let i = 0; i < playerCount; i += 1) {
+          const s = map.playerSpawns[i] || map.playerSpawns[0];
+          this.players.push({ id: i, x: s[0], z: s[1], yaw: 0, pitch: 0, health: 100, weapon: 0, cooldown: 0, grenades: 2, lastGrenadePulse: 0 });
+        }
+        this.startWave(1);
+      },
+      startWave(num) {
+        this.wave = num;
+        this.zombieQueue = 4 + num * 2;
+        this.spawnTimer = 16;
+        this.nextWaveTimer = 0;
+        for (const p of this.players) p.grenades = 2;
+      },
+      isBlocked(x, z, r = 0.45) {
+        const map = this.currentMap();
+        if (x < map.bounds.minX + r || x > map.bounds.maxX - r) return true;
+        if (z < map.bounds.minZ + r || z > map.bounds.maxZ - r) return true;
+        for (const b of map.blocks) {
+          if (Math.hypot(x - b.x, z - b.z) < b.r + r) return true;
+        }
+        return false;
+      },
+      collectInput() {
+        const p = this.localPlayer();
+        return { up: this.keys.up, down: this.keys.down, left: this.keys.left, right: this.keys.right, sprint: this.keys.sprint, fire: this.keys.fire, weapon: this.localWeapon, grenadePulse: this.localGrenadePulse, yaw: p ? p.yaw : 0, pitch: p ? p.pitch : 0 };
+      },
+      movePlayer(p, inp, dtScale) {
+        if (!p || p.health <= 0) return;
+        p.weapon = clamp(inp.weapon || 0, 0, 1);
+        p.yaw = normalizeAngle(inp.yaw || p.yaw);
+        p.pitch = clamp(inp.pitch || p.pitch, -0.95, 0.72);
+        const f = (inp.up ? 1 : 0) - (inp.down ? 1 : 0);
+        const s = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+        const m = Math.hypot(f, s) || 1;
+        const nf = f / m;
+        const ns = s / m;
+        const sp = (inp.sprint ? 0.16 : 0.115) * dtScale;
+        const sin = Math.sin(p.yaw);
+        const cos = Math.cos(p.yaw);
+        const dx = (sin * nf + cos * ns) * sp;
+        const dz = (cos * nf - sin * ns) * sp;
+        if (!this.isBlocked(p.x + dx, p.z)) p.x += dx;
+        if (!this.isBlocked(p.x, p.z + dz)) p.z += dz;
+        if (inp.fire && p.cooldown <= 0) this.shoot(p);
+        if (p.lastGrenadePulse !== inp.grenadePulse) {
+          p.lastGrenadePulse = inp.grenadePulse;
+          this.throwGrenade(p);
+        }
+      },
+      shoot(p) {
+        const damage = p.weapon === 0 ? 34 : 16;
+        const range = p.weapon === 0 ? 46 : 54;
+        p.cooldown = p.weapon === 0 ? 11 : 4;
+        const cp = Math.cos(p.pitch);
+        const dir = { x: Math.sin(p.yaw) * cp, y: Math.sin(p.pitch), z: Math.cos(p.yaw) * cp };
+        let best = null;
+        let bestT = Infinity;
+        for (const z of this.zombies) {
+          const vx = z.x - p.x;
+          const vy = 1 - 1.55;
+          const vz = z.z - p.z;
+          const t = vx * dir.x + vy * dir.y + vz * dir.z;
+          if (t <= 0 || t > range) continue;
+          const d2 = vx * vx + vy * vy + vz * vz - t * t;
+          if (d2 > 0.55 * 0.55) continue;
+          if (t < bestT) {
+            bestT = t;
+            best = z;
+          }
+        }
+        if (!best) return;
+        best.hp -= damage;
+        if (best.hp <= 0) this.score += 10;
+      },
+      throwGrenade(p) {
+        if (p.grenades <= 0 || p.health <= 0) return;
+        p.grenades -= 1;
+        const cp = Math.cos(p.pitch);
+        const dir = { x: Math.sin(p.yaw) * cp, y: Math.sin(p.pitch), z: Math.cos(p.yaw) * cp };
+        this.grenades.push({ x: p.x + dir.x * 0.9, y: 1.1, z: p.z + dir.z * 0.9, vx: dir.x * 0.36, vy: 0.24 + dir.y * 0.12, vz: dir.z * 0.36, t: 74 });
+      },
+      spawnZombie() {
+        const sp = this.currentMap().zombieSpawns[Math.floor(Math.random() * this.currentMap().zombieSpawns.length)];
+        this.zombies.push({ x: sp[0] + (Math.random() - 0.5), z: sp[1] + (Math.random() - 0.5), hp: 40 + this.wave * 8, speed: 0.023 + this.wave * 0.003, attack: 0 });
+      },
+      updateWorld(dtScale) {
+        const input = this.collectInput();
+        this.movePlayer(this.players[0], input, dtScale);
+        if (this.net.role === "host" && this.net.connected && this.players[1]) this.movePlayer(this.players[1], this.net.remoteInput || this.emptyInput(), dtScale);
+        for (const p of this.players) p.cooldown = Math.max(0, p.cooldown - dtScale);
+
+        if (this.zombieQueue > 0) {
+          this.spawnTimer -= dtScale;
+          if (this.spawnTimer <= 0) {
+            this.spawnZombie();
+            this.zombieQueue -= 1;
+            this.spawnTimer = Math.max(6, 20 - this.wave * 0.7);
+          }
+        }
+
+        for (const g of this.grenades) {
+          g.vy -= 0.011 * dtScale;
+          g.x += g.vx * dtScale;
+          g.y += g.vy * dtScale;
+          g.z += g.vz * dtScale;
+          if (g.y < 0.2) {
+            g.y = 0.2;
+            g.vy *= -0.45;
+            g.vx *= 0.86;
+            g.vz *= 0.86;
+          }
+          if (this.isBlocked(g.x, g.z, 0.18)) {
+            g.vx *= -0.55;
+            g.vz *= -0.55;
+          }
+          g.t -= dtScale;
+        }
+        const keepG = [];
+        for (const g of this.grenades) {
+          if (g.t > 0) {
+            keepG.push(g);
+            continue;
+          }
+          for (const z of this.zombies) {
+            const d = Math.hypot(z.x - g.x, z.z - g.z);
+            if (d > 5.3) continue;
+            z.hp -= 130 * (1 - d / 5.3);
+            if (z.hp <= 0) this.score += 10;
+          }
+        }
+        this.grenades = keepG;
+
+        const alivePlayers = this.players.filter((p) => p.health > 0);
+        for (const z of this.zombies) {
+          if (z.attack > 0) z.attack -= dtScale;
+          if (!alivePlayers.length) continue;
+          let target = alivePlayers[0];
+          let best = Infinity;
+          for (const p of alivePlayers) {
+            const d = Math.hypot(p.x - z.x, p.z - z.z);
+            if (d < best) {
+              best = d;
+              target = p;
+            }
+          }
+          if (best > 1.06) {
+            const inv = 1 / Math.max(0.001, best);
+            const nx = z.x + ((target.x - z.x) * inv) * z.speed * dtScale;
+            const nz = z.z + ((target.z - z.z) * inv) * z.speed * dtScale;
+            if (!this.isBlocked(nx, z.z, 0.4)) z.x = nx;
+            if (!this.isBlocked(z.x, nz, 0.4)) z.z = nz;
+          } else if (z.attack <= 0) {
+            target.health = Math.max(0, target.health - (6 + this.wave * 0.9));
+            z.attack = 28;
+          }
+        }
+        this.zombies = this.zombies.filter((z) => z.hp > 0);
+
+        if (!alivePlayers.length) this.state = "gameover";
+        if (this.zombieQueue === 0 && this.zombies.length === 0 && this.state === "playing") {
+          if (this.nextWaveTimer <= 0) this.nextWaveTimer = 130;
+          this.nextWaveTimer -= dtScale;
+          if (this.nextWaveTimer <= 0) this.startWave(this.wave + 1);
+        } else {
+          this.nextWaveTimer = 0;
+        }
+      },
+      async waitIce(pc) {
+        if (pc.iceGatheringState === "complete") return;
+        await new Promise((resolve) => {
+          const cb = () => {
+            if (pc.iceGatheringState === "complete") {
+              pc.removeEventListener("icegatheringstatechange", cb);
+              resolve();
+            }
+          };
+          pc.addEventListener("icegatheringstatechange", cb);
+        });
+      },
+      attachDC(dc) {
+        this.net.dc = dc;
+        dc.onopen = () => {
+          this.net.connected = true;
+          this.net.connecting = false;
+          this.state = "waiting";
+          if (this.net.role === "host") {
+            this.beginMatch(2);
+            this.sendNet({ t: "welcome", mapIndex: this.mapIndex, playerIndex: 1 });
+          }
+        };
+        dc.onclose = () => {
+          this.net.connected = false;
+          if (this.state === "playing" || this.state === "waiting") this.state = "gameover";
+        };
+        dc.onmessage = (e) => {
+          let m = null;
+          try { m = JSON.parse(e.data); } catch (_) { return; }
+          if (!m || !m.t) return;
+          if (this.net.role === "host" && m.t === "inp") this.net.remoteInput = m.i || this.emptyInput();
+          if (this.net.role === "guest" && m.t === "welcome") {
+            this.mapIndex = clamp(m.mapIndex || 0, 0, this.maps.length - 1);
+            this.playerIndex = m.playerIndex === 1 ? 1 : 0;
+            this.beginMatch(2);
+            this.state = "waiting";
+          }
+          if (this.net.role === "guest" && m.t === "snap") this.applySnapshot(m.s);
+        };
+      },
+      sendNet(obj) {
+        if (!this.net.dc || this.net.dc.readyState !== "open") return;
+        try { this.net.dc.send(JSON.stringify(obj)); } catch (_) {}
+      },
+      closeNetwork() {
+        if (this.net.dc) { try { this.net.dc.close(); } catch (_) {} }
+        if (this.net.pc) { try { this.net.pc.close(); } catch (_) {} }
+        this.net = { role: "none", pc: null, dc: null, connected: false, connecting: false, remoteInput: this.emptyInput(), sendTimer: 0 };
+      },
+      async startOnline(role) {
+        this.closeNetwork();
+        this.net.role = role;
+        this.net.connecting = true;
+        this.state = "connecting";
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+          this.net.pc = pc;
+          if (role === "host") {
+            const dc = pc.createDataChannel("zfps");
+            this.attachDC(dc);
+            await pc.setLocalDescription(await pc.createOffer());
+            await this.waitIce(pc);
+            window.prompt("HOST-KOD: skicka till din van", btoa(JSON.stringify(pc.localDescription)));
+            const answerCode = window.prompt("Klistra in ANSWER-kod fran van");
+            if (!answerCode) {
+              this.init();
+              return;
+            }
+            await pc.setRemoteDescription(JSON.parse(atob(answerCode.trim())));
+          } else {
+            pc.ondatachannel = (ev) => this.attachDC(ev.channel);
+            const offerCode = window.prompt("Klistra in HOST-koden");
+            if (!offerCode) {
+              this.init();
+              return;
+            }
+            await pc.setRemoteDescription(JSON.parse(atob(offerCode.trim())));
+            await pc.setLocalDescription(await pc.createAnswer());
+            await this.waitIce(pc);
+            window.prompt("ANSWER-KOD: skicka till host", btoa(JSON.stringify(pc.localDescription)));
+            this.state = "waiting";
+          }
+        } catch (_) {
+          this.init();
+        } finally {
+          this.net.connecting = false;
+        }
+      },
+      createSnapshot() {
+        return {
+          mapIndex: this.mapIndex,
+          state: this.state,
+          wave: this.wave,
+          score: this.score,
+          queue: this.zombieQueue,
+          players: this.players.map((p) => ({ id: p.id, x: p.x, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health, weapon: p.weapon, grenades: p.grenades })),
+          zombies: this.zombies.map((z) => ({ x: z.x, z: z.z, hp: z.hp })),
+          grenades: this.grenades.map((g) => ({ x: g.x, y: g.y, z: g.z, t: g.t }))
+        };
+      },
+      applySnapshot(s) {
+        if (!s) return;
+        this.mapIndex = clamp(s.mapIndex || 0, 0, this.maps.length - 1);
+        this.state = s.state || "playing";
+        this.wave = s.wave || 1;
+        this.score = s.score || 0;
+        this.zombieQueue = s.queue || 0;
+        this.players = (s.players || []).map((p) => ({ id: p.id, x: p.x, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health, weapon: p.weapon || 0, grenades: p.grenades || 0, cooldown: 0, lastGrenadePulse: 0 }));
+        this.zombies = (s.zombies || []).map((z) => ({ x: z.x, z: z.z, hp: z.hp, speed: 0.02, attack: 0 }));
+        this.grenades = (s.grenades || []).map((g) => ({ x: g.x, y: g.y, z: g.z, vx: 0, vy: 0, vz: 0, t: g.t }));
+        if (this.state === "waiting") this.state = "playing";
+      },
+      update(dtScale) {
+        if (this.state === "setup" || this.state === "connecting") return;
+        if (this.state === "waiting") {
+          if (this.net.role === "guest" && this.net.connected) {
+            this.net.sendTimer += dtScale;
+            if (this.net.sendTimer >= 1) {
+              this.net.sendTimer = 0;
+              this.sendNet({ t: "inp", i: this.collectInput() });
+            }
+          }
+          return;
+        }
+        if (this.net.role === "guest") {
+          this.net.sendTimer += dtScale;
+          if (this.net.sendTimer >= 1) {
+            this.net.sendTimer = 0;
+            this.sendNet({ t: "inp", i: this.collectInput() });
+          }
+          return;
+        }
+        if (this.state === "playing") this.updateWorld(dtScale);
+        if (this.net.role === "host" && this.net.connected) {
+          this.net.sendTimer += dtScale;
+          if (this.net.sendTimer >= 1.5) {
+            this.net.sendTimer = 0;
+            this.sendNet({ t: "snap", s: this.createSnapshot() });
+          }
+        }
+      },
+      drawSetup() {
+        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        g.addColorStop(0, "#0b162b");
+        g.addColorStop(1, "#162b49");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawLabel("ZOMBIE SIEGE FPS", 98, 34, "#ffbf46");
+        drawLabel("1 SINGLE  2 ONLINE HOST  3 ONLINE JOIN", 28, 56, "#dce8ff");
+        drawLabel(`VALT LAGE: ${this.modeNames[this.modeIndex]}`, 28, 82, "#9df0b8");
+        drawLabel(`BANA: ${this.currentMap().name}`, 28, 102, "#ffefbf");
+        drawLabel("Q/E BYTER BANA, ENTER STARTAR", 28, 122, "#dce8ff");
+        drawLabel("VAPEN: PISTOL + AR + 2 GRANATER PER VAG", 28, 152, "#dce8ff");
+      },
+      drawStatus() {
+        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        g.addColorStop(0, "#0b162b");
+        g.addColorStop(1, "#162b49");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (this.state === "connecting") drawLabel("ANSLUTER ONLINE... FOLJ PROMPTERNA", 42, 136, "#ffbf46");
+        else drawLabel("VANTAR PA HOST-SNAPSHOT...", 98, 136, "#ffbf46");
+      },
+      project(x, z, h = 0) {
+        const p = this.localPlayer();
+        if (!p) return null;
+        const dx = x - p.x;
+        const dz = z - p.z;
+        const c = Math.cos(p.yaw);
+        const s = Math.sin(p.yaw);
+        const xr = dx * c - dz * s;
+        const zr = dx * s + dz * c;
+        if (zr <= 0.12) return null;
+        const focal = 250;
+        const baseY = canvas.height * 0.57 + p.pitch * 95;
+        return {
+          x: canvas.width * 0.5 + (xr / zr) * focal,
+          y: baseY - (h / zr) * focal,
+          z: zr
+        };
+      },
+      drawWorld() {
+        const me = this.localPlayer();
+        if (!me) {
+          this.drawStatus();
+          return;
+        }
+        const map = this.currentMap();
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, map.sky1);
+        sky.addColorStop(1, map.sky2);
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = map.ground;
+        ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5);
+
+        const sprites = [];
+        for (const b of map.blocks) {
+          const p = this.project(b.x, b.z, 0);
+          if (!p) continue;
+          const s = (b.r / p.z) * 380;
+          sprites.push({ z: p.z, x: p.x - s * 0.5, y: p.y - s * 1.25, w: s, h: s * 1.25, c: "#6a727b" });
+        }
+        for (const z of this.zombies) {
+          const p = this.project(z.x, z.z, 0);
+          if (!p) continue;
+          const h = (1.85 / p.z) * 300;
+          const w = h * 0.52;
+          sprites.push({ z: p.z, x: p.x - w * 0.5, y: p.y - h, w, h, c: "#56bf68" });
+        }
+        for (const p2 of this.players) {
+          if (p2.id === this.playerIndex || p2.health <= 0) continue;
+          const p = this.project(p2.x, p2.z, 0);
+          if (!p) continue;
+          const h = (1.85 / p.z) * 300;
+          const w = h * 0.52;
+          sprites.push({ z: p.z, x: p.x - w * 0.5, y: p.y - h, w, h, c: "#79b6ff" });
+        }
+        for (const g of this.grenades) {
+          const p = this.project(g.x, g.z, g.y);
+          if (!p) continue;
+          const s = (0.35 / p.z) * 260;
+          sprites.push({ z: p.z, x: p.x - s * 0.5, y: p.y - s * 0.5, w: s, h: s, c: "#ffd369" });
+        }
+        sprites.sort((a, b) => b.z - a.z);
+        for (const s of sprites) {
+          ctx.fillStyle = s.c;
+          ctx.fillRect(Math.round(s.x), Math.round(s.y), Math.max(1, Math.round(s.w)), Math.max(1, Math.round(s.h)));
+          ctx.strokeStyle = "rgba(0,0,0,0.25)";
+          ctx.strokeRect(Math.round(s.x), Math.round(s.y), Math.max(1, Math.round(s.w)), Math.max(1, Math.round(s.h)));
+        }
+
+        const cx = canvas.width * 0.5;
+        const cy = canvas.height * 0.57;
+        ctx.strokeStyle = "#f4f8ff";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy);
+        ctx.lineTo(cx + 7, cy);
+        ctx.moveTo(cx, cy - 7);
+        ctx.lineTo(cx, cy + 7);
+        ctx.stroke();
+
+        drawLabel(`WAVE ${this.wave}`, 10, 14, "#f0f4ff");
+        drawLabel(`ZOMBIES ${this.zombies.length + this.zombieQueue}`, 10, 27, "#f0f4ff");
+        drawLabel(`HP ${Math.floor(Math.max(0, me.health))}`, 10, 40, me.health > 30 ? "#9df0b8" : "#ff93a6");
+        drawLabel(`VAPEN ${me.weapon === 0 ? "PISTOL" : "AR"}`, 10, 53, "#ffefbf");
+        drawLabel(`GRANATER ${me.grenades}/2`, 10, 66, "#ffbf46");
+        drawLabel(`POANG ${this.score}`, 366, 14, "#f0f4ff");
+
+        if (this.state === "gameover") {
+          ctx.fillStyle = "rgba(0,0,0,0.66)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("GAME OVER", 154, 124, "#ff5d73");
+          drawLabel(`SLUTPOANG ${this.score}`, 136, 144, "#f0f4ff");
+          drawLabel("ENTER FOR MENY", 144, 164, "#f0f4ff");
+        }
+      },
+      draw() {
+        if (this.state === "setup") this.drawSetup();
+        else if (this.state === "connecting" || this.state === "waiting") this.drawStatus();
+        else this.drawWorld();
+      }
+    };
+
+    const creed = {
+      title: "Desert Creed 3D",
+      hint: "3rd person: mus styr kameran (upp/ner/sida), WASD ror dig. Space parkour/hopp, 1/2/3 vapen, F/H attack.",
+      running: true,
+      missionComplete: false,
+      player: { x: 0, y: 0, z: 0, yaw: 0, speed: 0.2, vy: 0, radius: 0.62 },
+      camera: { x: 0, y: 0, z: 0, yaw: 0, pitch: -0.2, distance: 6.2, height: 3.2 },
+      keys: {
+        forward: false,
+        back: false,
+        left: false,
+        right: false,
+        turnLeft: false,
+        turnRight: false,
+        sprint: false
+      },
+      padState: {
+        connected: false,
+        moveX: 0,
+        moveY: 0,
+        turn: 0,
+        turnY: 0,
+        sprint: false,
+        prevButtons: []
+      },
+      buildings: [],
+      parkourBlocks: [],
+      targets: [],
+      projectiles: [],
+      weaponIndex: 0,
+      weapons: ["Hidden Blade", "Sword", "Throwing Knives"],
+      knifeAmmo: 16,
+      attackCooldown: 0,
+      killCount: 0,
+      totalTargets: 0,
+      worldSize: 74,
+      jumpQueued: false,
+      nearVault: false,
+      anim: {
+        movePhase: 0,
+        moveBlend: 0,
+        attack: 0,
+        vault: false,
+        vaultT: 0,
+        vaultDur: 20,
+        vaultFrom: { x: 0, y: 0, z: 0 },
+        vaultTo: { x: 0, y: 0, z: 0 }
+      },
+      init() {
+        this.running = true;
+        this.missionComplete = false;
+        this.player.x = 0;
+        this.player.y = 0;
+        this.player.z = 0;
+        this.player.yaw = 0;
+        this.player.vy = 0;
+        this.camera.yaw = this.player.yaw;
+        this.camera.pitch = -0.2;
+        this.weaponIndex = 0;
+        this.knifeAmmo = 16;
+        this.attackCooldown = 0;
+        this.killCount = 0;
+        this.projectiles = [];
+        this.jumpQueued = false;
+        this.nearVault = false;
+        this.anim.movePhase = 0;
+        this.anim.moveBlend = 0;
+        this.anim.attack = 0;
+        this.anim.vault = false;
+        this.anim.vaultT = 0;
+        this.padState.prevButtons = [];
+        this.keys = {
+          forward: false,
+          back: false,
+          left: false,
+          right: false,
+          turnLeft: false,
+          turnRight: false,
+          sprint: false
+        };
+        this.generateWorld();
+        this.generateTargets();
+        this.updateCamera();
+      },
+      seeded(seed) {
+        const x = Math.sin(seed * 91.371 + 17.17) * 43758.5453123;
+        return x - Math.floor(x);
+      },
+      generateWorld() {
+        this.buildings = [];
+        this.parkourBlocks = [];
+        let idx = 1;
+        for (let gz = -5; gz <= 5; gz += 1) {
+          for (let gx = -5; gx <= 5; gx += 1) {
+            const cx = gx * 13.5;
+            const cz = gz * 13.5;
+            if (Math.abs(cx) < 18 && Math.abs(cz) < 18) continue;
+            if (this.seeded(idx++) < 0.43) continue;
+
+            const w = 5 + this.seeded(idx++) * 4.5;
+            const d = 5 + this.seeded(idx++) * 4.5;
+            const h = 6 + this.seeded(idx++) * 14;
+            this.buildings.push({
+              x: cx + (this.seeded(idx++) - 0.5) * 2.3,
+              z: cz + (this.seeded(idx++) - 0.5) * 2.3,
+              w,
+              d,
+              h,
+              c1: "#c9b08d",
+              c2: "#b9976f",
+              c3: "#8f6f4f"
+            });
+          }
+        }
+
+        for (let i = 0; i < 28; i += 1) {
+          const a = i * 1.913;
+          const r = 18 + (i % 5) * 8 + this.seeded(i + 100) * 5;
+          this.parkourBlocks.push({
+            x: Math.cos(a) * r,
+            z: Math.sin(a) * r,
+            w: 1.5 + this.seeded(i + 10) * 1.8,
+            d: 1.5 + this.seeded(i + 20) * 1.8,
+            h: 1 + this.seeded(i + 30) * 1.8,
+            c1: "#a38961",
+            c2: "#8f7652",
+            c3: "#786243"
+          });
+        }
+      },
+      generateTargets() {
+        const points = [
+          [-28, -22], [24, -18], [33, 8], [11, 29], [-18, 31], [-35, 12], [-10, -33], [30, -34], [-32, -2]
+        ];
+        this.targets = points.map((point, i) => ({
+          x: point[0],
+          y: 0,
+          z: point[1],
+          homeX: point[0],
+          homeZ: point[1],
+          phase: i * 0.7,
+          alive: true
+        }));
+        this.totalTargets = this.targets.length;
+      },
+      isPressed(pad, idx) {
+        const b = pad.buttons[idx];
+        return Boolean(b && b.pressed);
+      },
+      pollGamepad() {
+        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const pad = pads && Array.from(pads).find((p) => p && p.connected);
+        if (!pad) {
+          this.padState.connected = false;
+          this.padState.moveX = 0;
+          this.padState.moveY = 0;
+          this.padState.turn = 0;
+          this.padState.turnY = 0;
+          this.padState.sprint = false;
+          this.padState.prevButtons = [];
+          return;
+        }
+
+        const dead = 0.18;
+        const ax0 = Math.abs(pad.axes[0] || 0) > dead ? pad.axes[0] : 0;
+        const ax1 = Math.abs(pad.axes[1] || 0) > dead ? pad.axes[1] : 0;
+        const ax2raw = pad.axes[2] !== undefined ? pad.axes[2] : (pad.axes[3] || 0);
+        const ax3raw = pad.axes[3] !== undefined ? pad.axes[3] : 0;
+        const ax2 = Math.abs(ax2raw) > dead ? ax2raw : 0;
+        const ax3 = Math.abs(ax3raw) > dead ? ax3raw : 0;
+        this.padState.connected = true;
+        this.padState.moveX = ax0;
+        this.padState.moveY = ax1;
+        this.padState.turn = ax2;
+        this.padState.turnY = ax3;
+        this.padState.sprint = this.isPressed(pad, 6) || this.isPressed(pad, 10);
+
+        const prev = this.padState.prevButtons;
+        const now = pad.buttons.map((b) => Boolean(b.pressed));
+        const edge = (i) => now[i] && !prev[i];
+
+        if (edge(0)) {
+          if (this.missionComplete) this.init();
+          else this.jumpQueued = true;
+        }
+        if (edge(4)) this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
+        if (edge(5)) this.attack();
+        if (edge(7)) this.throwKnife();
+        if (edge(2)) this.weaponIndex = 0;
+        if (edge(3)) this.weaponIndex = 1;
+        if (edge(1)) this.weaponIndex = 2;
+
+        this.padState.prevButtons = now;
+      },
+      onKeyDown(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.forward = true;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.back = true;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = true;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = true;
+        if (code === "KeyQ") this.keys.turnLeft = true;
+        if (code === "KeyE") this.keys.turnRight = true;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = true;
+
+        if (code === "Digit1") this.weaponIndex = 0;
+        if (code === "Digit2") this.weaponIndex = 1;
+        if (code === "Digit3") this.weaponIndex = 2;
+
+        if (code === "KeyF") this.attack();
+        if (code === "KeyH") this.throwKnife();
+        if (code === "Space") {
+          if (this.missionComplete) this.init();
+          else this.jumpQueued = true;
+        }
+        if (code === "Enter" && this.missionComplete) this.init();
+      },
+      onKeyUp(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.forward = false;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.back = false;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = false;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = false;
+        if (code === "KeyQ") this.keys.turnLeft = false;
+        if (code === "KeyE") this.keys.turnRight = false;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = false;
+      },
+      onClick() {
+        if (this.missionComplete) {
+          this.init();
+          return;
+        }
+        if (this.weaponIndex === 2) this.throwKnife();
+        else this.attack();
+      },
+      onLook(dx, dy) {
+        if (app.mode !== "game" || app.currentKey !== "creed") return;
+        const sens = 0.0026;
+        this.camera.yaw = normalizeAngle(this.camera.yaw + dx * sens);
+        this.camera.pitch = clamp(this.camera.pitch - dy * sens, -0.95, 0.55);
+      },
+      updateTargets() {
+        const t = performance.now() * 0.001;
+        for (const target of this.targets) {
+          if (!target.alive) continue;
+          target.x = target.homeX + Math.cos(t * 0.75 + target.phase) * 2.2;
+          target.z = target.homeZ + Math.sin(t * 0.75 + target.phase) * 2.2;
+        }
+      },
+      killTarget(target) {
+        if (!target || !target.alive) return;
+        target.alive = false;
+        this.killCount += 1;
+        if (this.killCount >= this.totalTargets) this.missionComplete = true;
+      },
+      attack() {
+        if (this.attackCooldown > 0 || !this.running) return;
+        this.player.yaw = this.camera.yaw;
+        if (this.weaponIndex === 2) {
+          this.throwKnife();
+          return;
+        }
+
+        const range = this.weaponIndex === 0 ? 2.4 : 4.5;
+        const arc = this.weaponIndex === 0 ? 0.42 : 0.78;
+        let best = null;
+        let bestDist = Infinity;
+        for (const target of this.targets) {
+          if (!target.alive) continue;
+          const dx = target.x - this.player.x;
+          const dz = target.z - this.player.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > range) continue;
+          const angleTo = Math.atan2(dx, dz);
+          const diff = Math.abs(normalizeAngle(angleTo - this.player.yaw));
+          if (diff > arc) continue;
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = target;
+          }
+        }
+
+        if (best) this.killTarget(best);
+        this.anim.attack = 1;
+        this.attackCooldown = this.weaponIndex === 0 ? 12 : 18;
+      },
+      throwKnife() {
+        if (!this.running || this.knifeAmmo <= 0 || this.attackCooldown > 0) return;
+        this.player.yaw = this.camera.yaw;
+        this.knifeAmmo -= 1;
+        this.attackCooldown = 10;
+        this.anim.attack = 1;
+
+        let dirX = Math.sin(this.player.yaw);
+        let dirZ = Math.cos(this.player.yaw);
+        let best = null;
+        let bestScore = Infinity;
+        for (const target of this.targets) {
+          if (!target.alive) continue;
+          const dx = target.x - this.player.x;
+          const dz = target.z - this.player.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 30) continue;
+          const angleTo = Math.atan2(dx, dz);
+          const diff = Math.abs(normalizeAngle(angleTo - this.player.yaw));
+          if (diff > 0.6) continue;
+          if (dist < bestScore) {
+            best = target;
+            bestScore = dist;
+          }
+        }
+        if (best) {
+          const dx = best.x - this.player.x;
+          const dz = best.z - this.player.z;
+          const inv = 1 / Math.max(0.001, Math.hypot(dx, dz));
+          dirX = dx * inv;
+          dirZ = dz * inv;
+        }
+        this.projectiles.push({
+          x: this.player.x + dirX * 0.9,
+          y: this.player.y + 1.3,
+          z: this.player.z + dirZ * 0.9,
+          vx: dirX * 1.05,
+          vz: dirZ * 1.05,
+          life: 100
+        });
+      },
+      collidesAt(x, z, y) {
+        const radius = this.player.radius;
+        for (const b of this.buildings) {
+          const hx = b.w * 0.5 + radius;
+          const hz = b.d * 0.5 + radius;
+          if (y < b.h + 0.08 && x > b.x - hx && x < b.x + hx && z > b.z - hz && z < b.z + hz) return true;
+        }
+        for (const p of this.parkourBlocks) {
+          const hx = p.w * 0.5 + radius;
+          const hz = p.d * 0.5 + radius;
+          if (y < p.h + 0.06 && x > p.x - hx && x < p.x + hx && z > p.z - hz && z < p.z + hz) return true;
+        }
+        return false;
+      },
+      vaultCandidate() {
+        const fx = Math.sin(this.camera.yaw);
+        const fz = Math.cos(this.camera.yaw);
+        let best = null;
+        let bestForward = Infinity;
+        for (const p of this.parkourBlocks) {
+          if (p.h > 2.8) continue;
+          const dx = p.x - this.player.x;
+          const dz = p.z - this.player.z;
+          const forward = dx * fx + dz * fz;
+          const side = Math.abs(dx * (-fz) + dz * fx);
+          if (forward < 0.7 || forward > 2.2) continue;
+          if (side > (Math.max(p.w, p.d) * 0.6 + 0.35)) continue;
+          if (forward < bestForward) {
+            bestForward = forward;
+            best = p;
+          }
+        }
+        return best;
+      },
+      tryVault() {
+        const candidate = this.vaultCandidate();
+        this.nearVault = Boolean(candidate);
+        if (!candidate) return false;
+
+        const fx = Math.sin(this.camera.yaw);
+        const fz = Math.cos(this.camera.yaw);
+        const span = Math.max(candidate.w, candidate.d) * 0.65 + 1.2;
+        this.anim.vault = true;
+        this.anim.vaultT = 0;
+        this.anim.vaultDur = 20;
+        this.anim.vaultFrom = { x: this.player.x, y: this.player.y, z: this.player.z };
+        this.anim.vaultTo = {
+          x: candidate.x + fx * span,
+          y: Math.max(this.player.y, candidate.h - 0.15),
+          z: candidate.z + fz * span
+        };
+        this.player.vy = 0;
+        return true;
+      },
+      movePlayer(dtScale) {
+        const turnAxis = (this.keys.turnRight ? 1 : 0) - (this.keys.turnLeft ? 1 : 0) + this.padState.turn;
+        this.camera.yaw = normalizeAngle(this.camera.yaw + turnAxis * 0.05 * dtScale);
+        this.camera.pitch = clamp(this.camera.pitch - this.padState.turnY * 0.035 * dtScale, -0.95, 0.55);
+
+        const fwd = (this.keys.forward ? 1 : 0) - (this.keys.back ? 1 : 0) - this.padState.moveY;
+        const strafe = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0) + this.padState.moveX;
+        const mag = Math.hypot(fwd, strafe);
+        let inF = fwd;
+        let inS = strafe;
+        if (mag > 1) {
+          inF /= mag;
+          inS /= mag;
+        }
+
+        const moving = Math.abs(inF) + Math.abs(inS) > 0.06;
+        const sprinting = this.keys.sprint || this.padState.sprint;
+        const speed = this.player.speed * (sprinting ? 1.8 : 1) * dtScale;
+        const sin = Math.sin(this.camera.yaw);
+        const cos = Math.cos(this.camera.yaw);
+        const dx = (sin * inF + cos * inS) * speed;
+        const dz = (cos * inF - sin * inS) * speed;
+
+        const nextX = clamp(this.player.x + dx, -this.worldSize, this.worldSize);
+        const nextZ = clamp(this.player.z + dz, -this.worldSize, this.worldSize);
+        const y = this.player.y;
+        if (!this.collidesAt(nextX, nextZ, y)) {
+          this.player.x = nextX;
+          this.player.z = nextZ;
+        } else {
+          if (!this.collidesAt(nextX, this.player.z, y)) this.player.x = nextX;
+          if (!this.collidesAt(this.player.x, nextZ, y)) this.player.z = nextZ;
+        }
+
+        this.nearVault = Boolean(this.vaultCandidate());
+        this.anim.moveBlend = moving ? Math.min(1, this.anim.moveBlend + 0.08 * dtScale) : Math.max(0, this.anim.moveBlend - 0.08 * dtScale);
+        this.anim.movePhase += (0.22 + Math.hypot(dx, dz) * 4) * dtScale;
+
+        if (moving) {
+          const targetYaw = Math.atan2(dx, dz);
+          const d = normalizeAngle(targetYaw - this.player.yaw);
+          this.player.yaw = normalizeAngle(this.player.yaw + d * 0.25);
+        }
+      },
+      updateVault(dtScale) {
+        if (!this.anim.vault) return false;
+        this.anim.vaultT += dtScale;
+        const t = clamp(this.anim.vaultT / this.anim.vaultDur, 0, 1);
+        const s = t * t * (3 - 2 * t);
+        this.player.x = this.anim.vaultFrom.x + (this.anim.vaultTo.x - this.anim.vaultFrom.x) * s;
+        this.player.z = this.anim.vaultFrom.z + (this.anim.vaultTo.z - this.anim.vaultFrom.z) * s;
+        const arc = Math.sin(t * Math.PI) * 1.2;
+        this.player.y = Math.max(0, this.anim.vaultFrom.y + (this.anim.vaultTo.y - this.anim.vaultFrom.y) * s + arc);
+        if (t >= 1) {
+          this.anim.vault = false;
+          this.player.y = Math.max(0, this.anim.vaultTo.y * 0.15);
+        }
+        return true;
+      },
+      updateVertical(dtScale) {
+        if (this.anim.vault) return;
+        this.player.vy -= 0.014 * dtScale;
+        this.player.y += this.player.vy * dtScale;
+        if (this.player.y <= 0) {
+          this.player.y = 0;
+          this.player.vy = 0;
+        }
+      },
+      updateProjectiles(dtScale) {
+        for (const knife of this.projectiles) {
+          knife.x += knife.vx * dtScale;
+          knife.z += knife.vz * dtScale;
+          knife.life -= dtScale;
+          for (const target of this.targets) {
+            if (!target.alive) continue;
+            const dx = target.x - knife.x;
+            const dz = target.z - knife.z;
+            if (dx * dx + dz * dz < 1.1 * 1.1) {
+              this.killTarget(target);
+              knife.life = -1;
+              break;
+            }
+          }
+        }
+        this.projectiles = this.projectiles.filter((knife) => knife.life > 0);
+      },
+      updateCamera() {
+        const lookX = this.player.x;
+        const lookY = this.player.y + 1.45;
+        const lookZ = this.player.z;
+        const cp = Math.cos(this.camera.pitch);
+        const sp = Math.sin(this.camera.pitch);
+        const sy = Math.sin(this.camera.yaw);
+        const cy = Math.cos(this.camera.yaw);
+        const dirX = sy * cp;
+        const dirY = sp;
+        const dirZ = cy * cp;
+        this.camera.x = lookX - dirX * this.camera.distance;
+        this.camera.y = lookY - dirY * this.camera.distance + this.camera.height * 0.15;
+        this.camera.z = lookZ - dirZ * this.camera.distance;
+      },
+      toCamera(wx, wy, wz) {
+        const dx = wx - this.camera.x;
+        const dy = wy - this.camera.y;
+        const dz = wz - this.camera.z;
+        const cos = Math.cos(this.camera.yaw);
+        const sin = Math.sin(this.camera.yaw);
+        const xr = dx * cos - dz * sin;
+        const zr = dx * sin + dz * cos;
+        const cp = Math.cos(this.camera.pitch);
+        const sp = Math.sin(this.camera.pitch);
+        return {
+          x: xr,
+          y: dy * cp - zr * sp,
+          z: dy * sp + zr * cp
+        };
+      },
+      project(cam) {
+        if (cam.z <= 0.12) return null;
+        const focal = 240;
+        return {
+          x: canvas.width * 0.5 + (cam.x / cam.z) * focal,
+          y: canvas.height * 0.67 - (cam.y / cam.z) * focal
+        };
+      },
+      pushBoxFaces(list, box) {
+        const hx = box.w * 0.5;
+        const hz = box.d * 0.5;
+        const verts = [
+          [box.x - hx, box.y, box.z - hz], [box.x + hx, box.y, box.z - hz], [box.x + hx, box.y, box.z + hz], [box.x - hx, box.y, box.z + hz],
+          [box.x - hx, box.y + box.h, box.z - hz], [box.x + hx, box.y + box.h, box.z - hz], [box.x + hx, box.y + box.h, box.z + hz], [box.x - hx, box.y + box.h, box.z + hz]
+        ];
+        const cam = verts.map((v) => this.toCamera(v[0], v[1], v[2]));
+        if (cam.every((v) => v.z <= 0.12)) return;
+        const faces = [
+          { idx: [0, 1, 5, 4], color: box.c1 },
+          { idx: [1, 2, 6, 5], color: box.c2 },
+          { idx: [2, 3, 7, 6], color: box.c1 },
+          { idx: [3, 0, 4, 7], color: box.c2 },
+          { idx: [4, 5, 6, 7], color: box.c3 }
+        ];
+        for (const face of faces) {
+          if (face.idx.some((i) => cam[i].z <= 0.12)) continue;
+          const pts = face.idx.map((i) => this.project(cam[i]));
+          if (pts.some((p) => !p)) continue;
+          const depth = face.idx.reduce((acc, i) => acc + cam[i].z, 0) / face.idx.length;
+          list.push({ pts, depth, color: face.color });
+        }
+      },
+      pushPlayerModel(list) {
+        const p = this.player;
+        const walk = Math.sin(this.anim.movePhase) * 0.35 * this.anim.moveBlend;
+        const attackSwing = Math.sin((1 - this.anim.attack) * Math.PI) * 0.7;
+        const armFront = attackSwing + walk;
+        const armBack = -walk * 0.8;
+        const legA = walk * 0.45;
+        const legB = -walk * 0.45;
+
+        this.pushBoxFaces(list, { x: p.x, y: p.y + 0.82, z: p.z, w: 0.64, d: 0.36, h: 1.1, c1: "#f2f2f2", c2: "#e2e2e2", c3: "#f8f8f8" });
+        this.pushBoxFaces(list, { x: p.x, y: p.y + 1.82, z: p.z, w: 0.4, d: 0.34, h: 0.42, c1: "#f0d8be", c2: "#d7bea5", c3: "#f4deca" });
+
+        this.pushBoxFaces(list, { x: p.x - 0.2, y: p.y + 0.27 + Math.max(0, legA), z: p.z + legA * 0.35, w: 0.22, d: 0.22, h: 0.65, c1: "#614b35", c2: "#4b3928", c3: "#725941" });
+        this.pushBoxFaces(list, { x: p.x + 0.2, y: p.y + 0.27 + Math.max(0, legB), z: p.z + legB * 0.35, w: 0.22, d: 0.22, h: 0.65, c1: "#614b35", c2: "#4b3928", c3: "#725941" });
+
+        this.pushBoxFaces(list, { x: p.x - 0.46, y: p.y + 1.02 + Math.max(0, armFront), z: p.z + armFront * 0.42, w: 0.19, d: 0.19, h: 0.66, c1: "#ececec", c2: "#dcdcdc", c3: "#f4f4f4" });
+        this.pushBoxFaces(list, { x: p.x + 0.46, y: p.y + 1.02 + Math.max(0, armBack), z: p.z + armBack * 0.42, w: 0.19, d: 0.19, h: 0.66, c1: "#ececec", c2: "#dcdcdc", c3: "#f4f4f4" });
+
+        if (this.weaponIndex === 1) {
+          const fx = Math.sin(p.yaw);
+          const fz = Math.cos(p.yaw);
+          this.pushBoxFaces(list, {
+            x: p.x + fx * (0.95 + attackSwing * 0.5),
+            y: p.y + 1.2,
+            z: p.z + fz * (0.95 + attackSwing * 0.5),
+            w: 0.08,
+            d: 0.95,
+            h: 0.08,
+            c1: "#e9e9e9",
+            c2: "#cdcdcd",
+            c3: "#ffffff"
+          });
+        } else if (this.weaponIndex === 0) {
+          const fx = Math.sin(p.yaw);
+          const fz = Math.cos(p.yaw);
+          this.pushBoxFaces(list, {
+            x: p.x + fx * 0.55,
+            y: p.y + 1.0,
+            z: p.z + fz * 0.55,
+            w: 0.06,
+            d: 0.42,
+            h: 0.04,
+            c1: "#f0f0f0",
+            c2: "#cfcfcf",
+            c3: "#ffffff"
+          });
+        }
+      },
+      drawGroundGrid() {
+        ctx.strokeStyle = "#8f7b56";
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.35;
+        for (let i = -10; i <= 10; i += 1) {
+          const gx = i * 8;
+          const a = this.toCamera(gx, 0, -88);
+          const b = this.toCamera(gx, 0, 88);
+          const pa = this.project(a);
+          const pb = this.project(b);
+          if (pa && pb) {
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.stroke();
+          }
+        }
+        for (let i = -10; i <= 14; i += 1) {
+          const gz = i * 8;
+          const a = this.toCamera(-88, 0, gz);
+          const b = this.toCamera(88, 0, gz);
+          const pa = this.project(a);
+          const pb = this.project(b);
+          if (pa && pb) {
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = 1;
+      },
+      drawHUD() {
+        const alive = this.targets.filter((t) => t.alive).length;
+        drawLabel(`WEAPON ${this.weapons[this.weaponIndex].toUpperCase()}`, 10, 14);
+        drawLabel(`TARGETS ${alive}/${this.totalTargets}`, 10, 27);
+        drawLabel(`KNIVES ${this.knifeAmmo}`, 10, 40);
+        drawLabel(`PAD ${this.padState.connected ? "ON" : "OFF"}`, 10, 53, this.padState.connected ? "#9df0b8" : "#f0f4ff");
+        if (this.nearVault && !this.anim.vault && this.player.y <= 0.05) {
+          drawLabel("SPACE/A: PARKOUR", 142, 250, "#ffbf46");
+        }
+
+        ctx.strokeStyle = "#f0f4ff";
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.8;
+        const cx = canvas.width * 0.5;
+        const cy = canvas.height * 0.58;
+        ctx.beginPath();
+        ctx.moveTo(cx - 6, cy);
+        ctx.lineTo(cx + 6, cy);
+        ctx.moveTo(cx, cy - 6);
+        ctx.lineTo(cx, cy + 6);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        if (this.missionComplete) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("TARGETS ELIMINATED", 88, 124, "#ffbf46");
+          drawLabel("PRESS SPACE/ENTER OR A", 56, 146, "#f0f4ff");
+        }
+      },
+      update(dtScale) {
+        this.pollGamepad();
+        this.attackCooldown = Math.max(0, this.attackCooldown - dtScale);
+        this.anim.attack = Math.max(0, this.anim.attack - 0.065 * dtScale);
+        if (this.missionComplete) {
+          this.updateCamera();
+          return;
+        }
+
+        if (this.jumpQueued) {
+          if (!this.tryVault() && this.player.y <= 0.05) this.player.vy = 0.24;
+          this.jumpQueued = false;
+        }
+
+        const inVault = this.updateVault(dtScale);
+        if (!inVault) this.movePlayer(dtScale);
+        this.updateVertical(dtScale);
+        this.updateTargets();
+        this.updateProjectiles(dtScale);
+        this.updateCamera();
+      },
+      draw() {
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#d7ba8a");
+        sky.addColorStop(0.55, "#c8a777");
+        sky.addColorStop(1, "#8d6f4d");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#a1835a";
+        ctx.fillRect(0, canvas.height * 0.62, canvas.width, canvas.height * 0.38);
+        this.drawGroundGrid();
+
+        const drawList = [];
+        for (const building of this.buildings) {
+          this.pushBoxFaces(drawList, { x: building.x, y: 0, z: building.z, w: building.w, d: building.d, h: building.h, c1: building.c1, c2: building.c2, c3: building.c3 });
+        }
+        for (const b of this.parkourBlocks) {
+          this.pushBoxFaces(drawList, { x: b.x, y: 0, z: b.z, w: b.w, d: b.d, h: b.h, c1: b.c1, c2: b.c2, c3: b.c3 });
+        }
+        for (const target of this.targets) {
+          if (!target.alive) continue;
+          this.pushBoxFaces(drawList, { x: target.x, y: 0, z: target.z, w: 1.1, d: 1.1, h: 3, c1: "#f2f2f2", c2: "#dadada", c3: "#f7f7f7" });
+          this.pushBoxFaces(drawList, { x: target.x, y: 3, z: target.z, w: 0.7, d: 0.7, h: 0.7, c1: "#5c1d1d", c2: "#7a2c2c", c3: "#8b3636" });
+        }
+        for (const knife of this.projectiles) {
+          this.pushBoxFaces(drawList, { x: knife.x, y: knife.y, z: knife.z, w: 0.16, d: 0.8, h: 0.08, c1: "#f2f2f2", c2: "#d7d7d7", c3: "#ffffff" });
+        }
+
+        this.pushPlayerModel(drawList);
+
+        drawList.sort((a, b) => b.depth - a.depth);
+        for (const poly of drawList) {
+          ctx.fillStyle = poly.color;
+          ctx.beginPath();
+          ctx.moveTo(poly.pts[0].x, poly.pts[0].y);
+          for (let i = 1; i < poly.pts.length; i += 1) ctx.lineTo(poly.pts[i].x, poly.pts[i].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "rgba(0,0,0,0.15)";
+          ctx.stroke();
+        }
+        this.drawHUD();
+      }
+    };
+
+    const spider = {
+      title: "Spider Swing 3D",
+      hint: "Mus styr kamera (upp/ner/sida). Hall F eller vanster musknapp for web-drag mot byggnad du siktar pa. Space hoppa.",
+      running: true,
+      player: {
+        x: 0, y: 0, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        yaw: 0,
+        radius: 0.55,
+        height: 1.7
+      },
+      camera: { x: 0, y: 0, z: 0, yaw: 0, pitch: -0.22, distance: 8.2, height: 3.1 },
+      keys: {
+        forward: false,
+        back: false,
+        left: false,
+        right: false,
+        turnLeft: false,
+        turnRight: false,
+        sprint: false
+      },
+      web: {
+        active: false,
+        anchorX: 0,
+        anchorY: 0,
+        anchorZ: 0,
+        length: 0,
+        keyHeld: false,
+        mouseHeld: false
+      },
+      city: [],
+      worldSize: 120,
+      movePhase: 0,
+      onGround: true,
+      init() {
+        this.running = true;
+        this.player.x = 0;
+        this.player.y = 0;
+        this.player.z = 0;
+        this.player.vx = 0;
+        this.player.vy = 0;
+        this.player.vz = 0;
+        this.player.yaw = 0;
+        this.camera.yaw = 0;
+        this.camera.pitch = -0.22;
+        this.onGround = true;
+        this.movePhase = 0;
+        this.web.active = false;
+        this.web.keyHeld = false;
+        this.web.mouseHeld = false;
+        this.generateCity();
+        this.updateCamera();
+      },
+      seeded(seed) {
+        const x = Math.sin(seed * 17.137 + 33.31) * 43758.5453;
+        return x - Math.floor(x);
+      },
+      generateCity() {
+        this.city = [];
+        let s = 1;
+        for (let gz = -14; gz <= 14; gz += 1) {
+          for (let gx = -14; gx <= 14; gx += 1) {
+            if (Math.abs(gx) <= 1 || Math.abs(gz) <= 1) continue;
+            if (gx % 3 === 0 || gz % 3 === 0) continue;
+            if (this.seeded(s++) < 0.2) continue;
+
+            const cx = gx * 8 + (this.seeded(s++) - 0.5) * 1.8;
+            const cz = gz * 8 + (this.seeded(s++) - 0.5) * 1.8;
+            const w = 3.6 + this.seeded(s++) * 3.3;
+            const d = 3.6 + this.seeded(s++) * 3.3;
+            const h = 8 + this.seeded(s++) * 34;
+            this.city.push({
+              x: cx,
+              z: cz,
+              w,
+              d,
+              h,
+              c1: "#4f5f77",
+              c2: "#3f4d61",
+              c3: "#6a7a95"
+            });
+          }
+        }
+      },
+      onKeyDown(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.forward = true;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.back = true;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = true;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = true;
+        if (code === "KeyQ") this.keys.turnLeft = true;
+        if (code === "KeyE") this.keys.turnRight = true;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = true;
+
+        if (code === "Space") {
+          if (this.onGround) {
+            this.player.vy = 0.42;
+            this.onGround = false;
+          }
+        }
+        if (code === "KeyF") {
+          if (!this.web.keyHeld) {
+            this.web.keyHeld = true;
+            if (!this.web.active) this.tryAttachWeb();
+          }
+        }
+      },
+      onKeyUp(code) {
+        if (code === "KeyW" || code === "ArrowUp") this.keys.forward = false;
+        if (code === "KeyS" || code === "ArrowDown") this.keys.back = false;
+        if (code === "KeyA" || code === "ArrowLeft") this.keys.left = false;
+        if (code === "KeyD" || code === "ArrowRight") this.keys.right = false;
+        if (code === "KeyQ") this.keys.turnLeft = false;
+        if (code === "KeyE") this.keys.turnRight = false;
+        if (code === "ShiftLeft" || code === "ShiftRight") this.keys.sprint = false;
+        if (code === "KeyF") {
+          this.web.keyHeld = false;
+          if (!this.web.mouseHeld) this.web.active = false;
+        }
+      },
+      onMouseDown(e) {
+        if (e.button !== 0) return;
+        this.web.mouseHeld = true;
+        if (!this.web.active) this.tryAttachWeb();
+      },
+      onMouseUp(e) {
+        if (e.button !== 0) return;
+        this.web.mouseHeld = false;
+        if (!this.web.keyHeld) this.web.active = false;
+      },
+      onMouseLeave() {
+        this.web.mouseHeld = false;
+        if (!this.web.keyHeld) this.web.active = false;
+      },
+      onClick() {
+      },
+      onLook(dx, dy) {
+        if (app.mode !== "game" || app.currentKey !== "spider") return;
+        const sens = 0.0028;
+        this.camera.yaw = normalizeAngle(this.camera.yaw + dx * sens);
+        this.camera.pitch = clamp(this.camera.pitch - dy * sens, -1.02, 0.52);
+      },
+      getLookDirection() {
+        const cp = Math.cos(this.camera.pitch);
+        const sp = Math.sin(this.camera.pitch);
+        const sy = Math.sin(this.camera.yaw);
+        const cy = Math.cos(this.camera.yaw);
+        return {
+          x: sy * cp,
+          y: sp,
+          z: cy * cp
+        };
+      },
+      raycastWebAnchor(origin, dir) {
+        const maxDist = 120;
+        const step = 0.75;
+        let t = 0;
+        while (t <= maxDist) {
+          const px = origin.x + dir.x * t;
+          const py = origin.y + dir.y * t;
+          const pz = origin.z + dir.z * t;
+          for (const b of this.city) {
+            const hx = b.w * 0.5;
+            const hz = b.d * 0.5;
+            if (px >= b.x - hx && px <= b.x + hx && pz >= b.z - hz && pz <= b.z + hz && py >= 0 && py <= b.h + 0.4) {
+              return { x: px, y: clamp(py, 0.4, b.h + 0.4), z: pz };
+            }
+          }
+          t += step;
+        }
+        return null;
+      },
+      tryAttachWeb() {
+        const hand = {
+          x: this.player.x,
+          y: this.player.y + 1.25,
+          z: this.player.z
+        };
+        const camOrigin = {
+          x: this.camera.x,
+          y: this.camera.y,
+          z: this.camera.z
+        };
+        const look = this.getLookDirection();
+        const hit = this.raycastWebAnchor(camOrigin, look);
+        if (!hit) return false;
+        const anchor = hit;
+
+        this.web.active = true;
+        this.web.anchorX = anchor.x;
+        this.web.anchorY = anchor.y;
+        this.web.anchorZ = anchor.z;
+        this.web.length = Math.max(5.2, Math.hypot(hand.x - anchor.x, hand.y - anchor.y, hand.z - anchor.z) * 0.92);
+        return true;
+      },
+      resolveCityCollision(prevX, prevZ) {
+        const p = this.player;
+        for (const b of this.city) {
+          const hx = b.w * 0.5 + p.radius;
+          const hz = b.d * 0.5 + p.radius;
+          if (p.y > b.h + 0.35) continue;
+          if (p.x > b.x - hx && p.x < b.x + hx && p.z > b.z - hz && p.z < b.z + hz) {
+            p.x = prevX;
+            p.z = prevZ;
+            p.vx *= 0.2;
+            p.vz *= 0.2;
+            return;
+          }
+        }
+      },
+      updatePlayer(dtScale) {
+        const p = this.player;
+
+        const turn = (this.keys.turnRight ? 1 : 0) - (this.keys.turnLeft ? 1 : 0);
+        this.camera.yaw = normalizeAngle(this.camera.yaw + turn * 0.05 * dtScale);
+
+        const fwd = (this.keys.forward ? 1 : 0) - (this.keys.back ? 1 : 0);
+        const strafe = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+        const mag = Math.hypot(fwd, strafe);
+        let mF = fwd;
+        let mS = strafe;
+        if (mag > 1) {
+          mF /= mag;
+          mS /= mag;
+        }
+
+        const sin = Math.sin(this.camera.yaw);
+        const cos = Math.cos(this.camera.yaw);
+        const accel = (this.onGround ? 0.022 : 0.010) * (this.keys.sprint ? 1.25 : 1) * dtScale;
+        p.vx += (sin * mF + cos * mS) * accel;
+        p.vz += (cos * mF - sin * mS) * accel;
+
+        p.vy -= 0.0155 * dtScale;
+
+        const prevX = p.x;
+        const prevZ = p.z;
+        p.x += p.vx * dtScale;
+        p.y += p.vy * dtScale;
+        p.z += p.vz * dtScale;
+
+        const holdWeb = this.web.keyHeld || this.web.mouseHeld;
+        if (holdWeb && !this.web.active) this.tryAttachWeb();
+        if (!holdWeb && this.web.active) this.web.active = false;
+
+        if (this.web.active) {
+          if (this.keys.sprint) this.web.length = Math.max(4.2, this.web.length - 0.05 * dtScale);
+
+          const dx = p.x - this.web.anchorX;
+          const dy = (p.y + 1.2) - this.web.anchorY;
+          const dz = p.z - this.web.anchorZ;
+          const dist = Math.hypot(dx, dy, dz);
+          if (dist > 0.001) {
+            const inv = 1 / dist;
+            const px = -dx * inv;
+            const py = -dy * inv;
+            const pz = -dz * inv;
+            const pull = 0.046 * dtScale;
+            p.vx += px * pull;
+            p.vy += py * pull;
+            p.vz += pz * pull;
+            this.web.length = Math.max(3.6, this.web.length - 0.04 * dtScale);
+          }
+          if (dist > this.web.length) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const nz = dz / dist;
+            p.x = this.web.anchorX + nx * this.web.length;
+            p.y = (this.web.anchorY + ny * this.web.length) - 1.2;
+            p.z = this.web.anchorZ + nz * this.web.length;
+            const radial = p.vx * nx + p.vy * ny + p.vz * nz;
+            p.vx -= nx * radial;
+            p.vy -= ny * radial;
+            p.vz -= nz * radial;
+          }
+        }
+
+        this.resolveCityCollision(prevX, prevZ);
+
+        if (p.y <= 0) {
+          p.y = 0;
+          p.vy = 0;
+          this.onGround = true;
+        } else {
+          this.onGround = false;
+        }
+
+        p.x = clamp(p.x, -this.worldSize, this.worldSize);
+        p.z = clamp(p.z, -this.worldSize, this.worldSize);
+
+        if (this.onGround) {
+          p.vx *= 0.86;
+          p.vz *= 0.86;
+        } else {
+          p.vx *= 0.994;
+          p.vz *= 0.994;
+        }
+
+        const speed = Math.hypot(p.vx, p.vz);
+        this.movePhase += (0.18 + speed * 2.2) * dtScale;
+        if (speed > 0.02) {
+          const targetYaw = Math.atan2(p.vx, p.vz);
+          const d = normalizeAngle(targetYaw - p.yaw);
+          p.yaw = normalizeAngle(p.yaw + d * 0.22);
+        }
+      },
+      updateCamera() {
+        const p = this.player;
+        const lookX = p.x;
+        const lookY = p.y + 1.45;
+        const lookZ = p.z;
+        const cp = Math.cos(this.camera.pitch);
+        const sp = Math.sin(this.camera.pitch);
+        const sy = Math.sin(this.camera.yaw);
+        const cy = Math.cos(this.camera.yaw);
+        const dirX = sy * cp;
+        const dirY = sp;
+        const dirZ = cy * cp;
+        this.camera.x = lookX - dirX * this.camera.distance;
+        this.camera.y = lookY - dirY * this.camera.distance + this.camera.height * 0.12;
+        this.camera.z = lookZ - dirZ * this.camera.distance;
+      },
+      toCamera(wx, wy, wz) {
+        const dx = wx - this.camera.x;
+        const dy = wy - this.camera.y;
+        const dz = wz - this.camera.z;
+        const cos = Math.cos(this.camera.yaw);
+        const sin = Math.sin(this.camera.yaw);
+        const xr = dx * cos - dz * sin;
+        const zr = dx * sin + dz * cos;
+        const cp = Math.cos(this.camera.pitch);
+        const sp = Math.sin(this.camera.pitch);
+        return {
+          x: xr,
+          y: dy * cp - zr * sp,
+          z: dy * sp + zr * cp
+        };
+      },
+      project(cam) {
+        if (cam.z <= 0.2) return null;
+        const focal = 230;
+        return {
+          x: canvas.width * 0.5 + (cam.x / cam.z) * focal,
+          y: canvas.height * 0.68 - (cam.y / cam.z) * focal
+        };
+      },
+      pushBoxFaces(list, box) {
+        const hx = box.w * 0.5;
+        const hz = box.d * 0.5;
+        const verts = [
+          [box.x - hx, box.y, box.z - hz], [box.x + hx, box.y, box.z - hz], [box.x + hx, box.y, box.z + hz], [box.x - hx, box.y, box.z + hz],
+          [box.x - hx, box.y + box.h, box.z - hz], [box.x + hx, box.y + box.h, box.z - hz], [box.x + hx, box.y + box.h, box.z + hz], [box.x - hx, box.y + box.h, box.z + hz]
+        ];
+        const cam = verts.map((v) => this.toCamera(v[0], v[1], v[2]));
+        if (cam.every((v) => v.z <= 0.2)) return;
+        const faces = [
+          { idx: [0, 1, 5, 4], color: box.c1 },
+          { idx: [1, 2, 6, 5], color: box.c2 },
+          { idx: [2, 3, 7, 6], color: box.c1 },
+          { idx: [3, 0, 4, 7], color: box.c2 },
+          { idx: [4, 5, 6, 7], color: box.c3 }
+        ];
+        for (const face of faces) {
+          if (face.idx.some((i) => cam[i].z <= 0.2)) continue;
+          const pts = face.idx.map((i) => this.project(cam[i]));
+          if (pts.some((p) => !p)) continue;
+          const depth = face.idx.reduce((acc, i) => acc + cam[i].z, 0) / face.idx.length;
+          list.push({ pts, depth, color: face.color });
+        }
+      },
+      pushPlayerModel(list) {
+        const p = this.player;
+        const speed = Math.hypot(p.vx, p.vz);
+        const walk = Math.sin(this.movePhase) * Math.min(0.5, speed * 2.4);
+        const armA = this.web.active ? -0.8 : walk;
+        const armB = this.web.active ? -0.8 : -walk;
+
+        this.pushBoxFaces(list, { x: p.x, y: p.y + 0.82, z: p.z, w: 0.6, d: 0.34, h: 1.1, c1: "#d32626", c2: "#ab1c1c", c3: "#f24545" });
+        this.pushBoxFaces(list, { x: p.x, y: p.y + 1.82, z: p.z, w: 0.36, d: 0.32, h: 0.42, c1: "#f3d9c2", c2: "#d4b79f", c3: "#f7e6d8" });
+        this.pushBoxFaces(list, { x: p.x - 0.42, y: p.y + 1 + Math.max(0, armA), z: p.z + armA * 0.3, w: 0.18, d: 0.18, h: 0.64, c1: "#1d4ea1", c2: "#163d7f", c3: "#3265be" });
+        this.pushBoxFaces(list, { x: p.x + 0.42, y: p.y + 1 + Math.max(0, armB), z: p.z + armB * 0.3, w: 0.18, d: 0.18, h: 0.64, c1: "#1d4ea1", c2: "#163d7f", c3: "#3265be" });
+        this.pushBoxFaces(list, { x: p.x - 0.18, y: p.y + 0.28 + Math.max(0, walk * 0.3), z: p.z + walk * 0.28, w: 0.2, d: 0.2, h: 0.66, c1: "#1d4ea1", c2: "#163d7f", c3: "#3265be" });
+        this.pushBoxFaces(list, { x: p.x + 0.18, y: p.y + 0.28 + Math.max(0, -walk * 0.3), z: p.z - walk * 0.28, w: 0.2, d: 0.2, h: 0.66, c1: "#1d4ea1", c2: "#163d7f", c3: "#3265be" });
+      },
+      drawGround() {
+        ctx.fillStyle = "#2a303a";
+        ctx.fillRect(0, canvas.height * 0.66, canvas.width, canvas.height * 0.34);
+        ctx.strokeStyle = "rgba(215,225,255,0.16)";
+        ctx.lineWidth = 1;
+        for (let i = -24; i <= 24; i += 1) {
+          const x = i * 8;
+          const a = this.toCamera(x, 0, -150);
+          const b = this.toCamera(x, 0, 150);
+          const pa = this.project(a);
+          const pb = this.project(b);
+          if (pa && pb) {
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.stroke();
+          }
+        }
+        for (let i = -24; i <= 24; i += 1) {
+          const z = i * 8;
+          const a = this.toCamera(-150, 0, z);
+          const b = this.toCamera(150, 0, z);
+          const pa = this.project(a);
+          const pb = this.project(b);
+          if (pa && pb) {
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.stroke();
+          }
+        }
+      },
+      drawWebLine() {
+        if (!this.web.active) return;
+        const hand = this.project(this.toCamera(this.player.x, this.player.y + 1.2, this.player.z));
+        const anchor = this.project(this.toCamera(this.web.anchorX, this.web.anchorY, this.web.anchorZ));
+        if (!hand || !anchor) return;
+        ctx.strokeStyle = "#e6f3ff";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(hand.x, hand.y);
+        ctx.lineTo(anchor.x, anchor.y);
+        ctx.stroke();
+      },
+      update(dtScale) {
+        this.updatePlayer(dtScale);
+        this.updateCamera();
+      },
+      draw() {
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#77beff");
+        sky.addColorStop(0.55, "#95cfff");
+        sky.addColorStop(1, "#c4dfff");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        this.drawGround();
+
+        const drawList = [];
+        for (const b of this.city) {
+          this.pushBoxFaces(drawList, {
+            x: b.x, y: 0, z: b.z,
+            w: b.w, d: b.d, h: b.h,
+            c1: b.c1, c2: b.c2, c3: b.c3
+          });
+        }
+        this.pushPlayerModel(drawList);
+        drawList.sort((a, b) => b.depth - a.depth);
+
+        for (const poly of drawList) {
+          ctx.fillStyle = poly.color;
+          ctx.beginPath();
+          ctx.moveTo(poly.pts[0].x, poly.pts[0].y);
+          for (let i = 1; i < poly.pts.length; i += 1) ctx.lineTo(poly.pts[i].x, poly.pts[i].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "rgba(0,0,0,0.18)";
+          ctx.stroke();
+        }
+
+        this.drawWebLine();
+
+        const cx = canvas.width * 0.5;
+        const cy = canvas.height * 0.68;
+        ctx.strokeStyle = "#f2f8ff";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy);
+        ctx.lineTo(cx + 7, cy);
+        ctx.moveTo(cx, cy - 7);
+        ctx.lineTo(cx, cy + 7);
+        ctx.stroke();
+
+        const speed = Math.hypot(this.player.vx, this.player.vz, this.player.vy) * 12;
+        drawLabel(`SPEED ${Math.floor(speed)}`, 10, 14);
+        drawLabel(`WEB ${this.web.active ? "ON" : "OFF"}`, 10, 27);
+        drawLabel(`CITY ZONES ${this.city.length}`, 10, 40);
+        drawLabel(`HOLD F/MB1 WEB PULL | SPACE JUMP`, 10, 53, "#eef7ff");
+      }
+    };
+
+    const games = { pong, dash, creator, snake, blaster, flappy, fifa, zombiefps, creed, spider };
+
+    function setCreatorUIVisible(visible) {
+      creatorUI.classList.toggle("show", visible);
+    }
+
+    function setMode(mode) {
+      app.mode = mode;
+      const inMenu = mode === "menu";
+      menu.style.display = inMenu ? "block" : "none";
+      gameView.style.display = inMenu ? "none" : "block";
+    }
+
+    function startGame(key) {
+      const game = games[key];
+      if (!game) return;
+      app.currentKey = key;
+      app.currentGame = game;
+      gameTitle.textContent = game.title;
+      gameHint.textContent = game.hint;
+      canvas.style.cursor = key === "pong" ? "none" : (key === "creator" ? "crosshair" : "default");
+      setCreatorUIVisible(key === "creator");
+      game.init();
+      setMode("game");
+      lockPointerToGame();
+    }
+
+    function backToMenu() {
+      if (document.fullscreenElement === gameView) {
+        document.exitFullscreen().catch(() => {});
+      }
+      unlockPointerFromGame();
+      app.currentGame = null;
+      app.currentKey = "";
+      canvas.style.cursor = "default";
+      setCreatorUIVisible(false);
+      setMode("menu");
+    }
+
+    function updateFullscreenButtons() {
+      const label = document.fullscreenElement === gameView ? "Avsluta helskarm" : "Helskarm";
+      fullscreenButtons.forEach((button) => {
+        button.textContent = label;
+      });
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (app.mode !== "game") return;
+        if (document.fullscreenElement === gameView) await document.exitFullscreen();
+        else await gameView.requestFullscreen();
+      } catch (_) {
+      }
+      updateFullscreenButtons();
+    }
+
+    document.querySelectorAll("[data-game]").forEach((btn) => {
+      btn.addEventListener("click", () => startGame(btn.dataset.game));
+    });
+    backBtn.addEventListener("click", backToMenu);
+    fullscreenButtons.forEach((button) => button.addEventListener("click", toggleFullscreen));
+    document.addEventListener("fullscreenchange", updateFullscreenButtons);
+
+    canvas.addEventListener("mousemove", (e) => {
+      updateVirtualMouse(e);
+      if (app.mode === "game" && app.currentGame && app.currentGame.onLook) {
+        app.currentGame.onLook(e.movementX || 0, e.movementY || 0, e);
+      }
+      if (app.mode !== "game" || !app.currentGame || !app.currentGame.onMouseMove) return;
+      app.currentGame.onMouseMove(e);
+    });
+
+    canvas.addEventListener("mousedown", (e) => {
+      updateVirtualMouse(e);
+      if (app.mode !== "game" || !app.currentGame || !app.currentGame.onMouseDown) return;
+      app.currentGame.onMouseDown(e);
+    });
+
+    canvas.addEventListener("mouseup", (e) => {
+      if (app.mode !== "game" || !app.currentGame || !app.currentGame.onMouseUp) return;
+      app.currentGame.onMouseUp(e);
+    });
+
+    canvas.addEventListener("mouseleave", (e) => {
+      if (app.mode !== "game" || !app.currentGame || !app.currentGame.onMouseLeave) return;
+      app.currentGame.onMouseLeave(e);
+    });
+
+    canvas.addEventListener("contextmenu", (e) => {
+      if (app.mode === "game" && app.currentKey === "creator") {
+        e.preventDefault();
+      }
+    });
+
+    canvas.addEventListener("click", () => {
+      if (app.mode === "game") lockPointerToGame();
+      if (app.mode !== "game" || !app.currentGame || !app.currentGame.onClick) return;
+      app.currentGame.onClick();
+    });
+
+    document.addEventListener("pointerlockchange", () => {
+      if (document.pointerLockElement !== canvas && app.mode === "game") {
+        canvas.style.cursor = app.currentKey === "pong" ? "none" : (app.currentKey === "creator" ? "crosshair" : "default");
+      }
+    });
+
+    partTypeInput.addEventListener("change", () => {
+      creator.selectedType = partTypeInput.value;
+    });
+    partSizeInput.addEventListener("input", () => {
+      creator.selectedSize = Number(partSizeInput.value);
+    });
+    bodySizeInput.addEventListener("input", () => {
+      creator.bodyRadius = Number(bodySizeInput.value);
+    });
+    partColorInput.addEventListener("input", () => {
+      creator.selectedColor = partColorInput.value;
+    });
+    symmetryInput.addEventListener("change", () => {
+      creator.symmetry = Boolean(symmetryInput.checked);
+    });
+    clearCreatureBtn.addEventListener("click", () => {
+      creator.parts = [];
+      creator.dragId = 0;
+    });
+    randomCreatureBtn.addEventListener("click", () => {
+      creator.randomCreature();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if ([
+        "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+        "Space", "Enter", "Tab",
+        "KeyA", "KeyD", "KeyW", "KeyS", "KeyQ", "KeyE", "KeyF", "KeyG", "KeyH",
+        "ShiftLeft", "ShiftRight",
+        "Digit1", "Digit2", "Digit3", "Digit4"
+      ].includes(e.code)) {
+        e.preventDefault();
+      }
+      if (app.mode === "game" && app.currentGame && app.currentGame.onKeyDown) app.currentGame.onKeyDown(e.code);
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (app.mode === "game" && app.currentGame && app.currentGame.onKeyUp) app.currentGame.onKeyUp(e.code);
+    });
+
+    function frame(ts) {
+      const dt = Math.min(34, ts - (app.lastTs || ts));
+      app.lastTs = ts;
+      const dtScale = dt / 16.6667;
+
+      ctx.imageSmoothingEnabled = false;
+      if (app.mode === "game" && app.currentGame) {
+        app.currentGame.update(dtScale);
+        app.currentGame.draw();
+      }
+      requestAnimationFrame(frame);
+    }
+
+    setMode("menu");
+    setCreatorUIVisible(false);
+    updateFullscreenButtons();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
+
+

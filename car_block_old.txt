@@ -1,0 +1,210 @@
+    const car = {
+      title: "3D Bilspel",
+      hint: "Pil vanster/hoger eller A/D: byt fil. Space efter krasch for omstart.",
+      highScore: 0,
+      running: true,
+      playerLane: 0,
+      targetLane: 0,
+      obstacles: [],
+      spawnTimer: 0,
+      spawnEvery: 46,
+      speed: 0.018,
+      score: 0,
+      horizonY: 56,
+      roadBottomY: 255,
+      roadTopW: 110,
+      roadBottomW: 420,
+      skins: [
+        { body: "#ff5d73", roof: "#ffd8de", trim: "#ffa6b6" },
+        { body: "#ff9f43", roof: "#ffe3b7", trim: "#ffd07a" },
+        { body: "#8a7dff", roof: "#ddd8ff", trim: "#b9adff" }
+      ],
+      playerSkin: { body: "#38d9a9", roof: "#d6fff3", trim: "#7cf4cf" },
+      init() {
+        this.running = true;
+        this.playerLane = 0;
+        this.targetLane = 0;
+        this.obstacles = [];
+        this.spawnTimer = 0;
+        this.spawnEvery = 46;
+        this.speed = 0.018;
+        this.score = 0;
+      },
+      laneCenter(lane, t) {
+        const roadW = this.roadTopW + t * (this.roadBottomW - this.roadTopW);
+        const laneW = roadW / 3;
+        return canvas.width / 2 + lane * laneW * 0.96;
+      },
+      spawnObstacle() {
+        const lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        this.obstacles.push({
+          lane,
+          depth: 1.15,
+          passed: false,
+          skin: Math.floor(Math.random() * this.skins.length)
+        });
+      },
+      onClick() {
+        if (!this.running) this.init();
+      },
+      onKeyDown(code) {
+        if (code === "ArrowLeft" || code === "KeyA") this.targetLane = clamp(this.targetLane - 1, -1, 1);
+        if (code === "ArrowRight" || code === "KeyD") this.targetLane = clamp(this.targetLane + 1, -1, 1);
+        if ((code === "Space" || code === "Enter") && !this.running) this.init();
+      },
+      update(dtScale) {
+        if (!this.running) return;
+
+        this.playerLane += (this.targetLane - this.playerLane) * 0.24 * dtScale;
+        this.speed = Math.min(0.033, this.speed + 0.000006 * dtScale);
+
+        this.spawnTimer += dtScale;
+        if (this.spawnTimer >= this.spawnEvery) {
+          this.spawnTimer = 0;
+          this.spawnObstacle();
+          this.spawnEvery = Math.max(20, this.spawnEvery - 0.03);
+        }
+
+        for (const obstacle of this.obstacles) {
+          obstacle.depth -= this.speed * dtScale * (1.1 + (1.15 - obstacle.depth) * 0.4);
+
+          if (!obstacle.passed && obstacle.depth < 0) {
+            obstacle.passed = true;
+            this.score += 1;
+            this.highScore = Math.max(this.highScore, this.score);
+          }
+
+          if (obstacle.depth < 0.16 && obstacle.depth > -0.06 && Math.abs(this.playerLane - obstacle.lane) < 0.28) {
+            this.running = false;
+          }
+        }
+
+        this.obstacles = this.obstacles.filter((obstacle) => obstacle.depth > -0.3);
+      },
+      drawRoad() {
+        const cx = canvas.width / 2;
+        const h = this.horizonY;
+        const by = this.roadBottomY;
+        const tw = this.roadTopW;
+        const bw = this.roadBottomW;
+
+        ctx.fillStyle = "#5fa8d3";
+        ctx.fillRect(0, 0, canvas.width, h);
+        ctx.fillStyle = "#ffc857";
+        ctx.fillRect(360, 14, 24, 24);
+
+        ctx.fillStyle = "#2f5d50";
+        ctx.fillRect(0, h, canvas.width, canvas.height - h);
+
+        ctx.fillStyle = "#2e3139";
+        ctx.beginPath();
+        ctx.moveTo(cx - tw / 2, h);
+        ctx.lineTo(cx + tw / 2, h);
+        ctx.lineTo(cx + bw / 2, by);
+        ctx.lineTo(cx - bw / 2, by);
+        ctx.closePath();
+        ctx.fill();
+
+        for (let i = 0; i < 22; i += 1) {
+          const t = i / 22;
+          const y = h + t * (by - h);
+          const w = tw + t * (bw - tw);
+          const x = cx - w / 2;
+          ctx.fillStyle = i % 2 === 0 ? "#2b2f38" : "#343944";
+          ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), 7);
+        }
+
+        for (let i = 0; i < 18; i += 1) {
+          const t1 = i / 18;
+          const t2 = (i + 0.45) / 18;
+          const y1 = h + t1 * (by - h);
+          const y2 = h + t2 * (by - h);
+          const w1 = tw + t1 * (bw - tw);
+          const w2 = tw + t2 * (bw - tw);
+
+          const lane1x = cx - w1 / 6;
+          const lane2x = cx + w1 / 6;
+          const lane1x2 = cx - w2 / 6;
+          const lane2x2 = cx + w2 / 6;
+
+          ctx.fillStyle = "#ffe29a";
+          ctx.beginPath();
+          ctx.moveTo(lane1x - 2, y1);
+          ctx.lineTo(lane1x + 2, y1);
+          ctx.lineTo(lane1x2 + 2, y2);
+          ctx.lineTo(lane1x2 - 2, y2);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(lane2x - 2, y1);
+          ctx.lineTo(lane2x + 2, y1);
+          ctx.lineTo(lane2x2 + 2, y2);
+          ctx.lineTo(lane2x2 - 2, y2);
+          ctx.closePath();
+          ctx.fill();
+        }
+      },
+      drawCar(x, y, w, h, skin) {
+        const px = Math.max(1, Math.floor(w / 12));
+        const py = Math.max(1, Math.floor(h / 16));
+        const rw = px * 12;
+        const rh = py * 16;
+        const ox = Math.round(x + (w - rw) / 2);
+        const oy = Math.round(y + (h - rh) / 2);
+
+        ctx.fillStyle = "#070b13";
+        ctx.fillRect(ox, oy + rh - 3 * py, 2 * px, 3 * py);
+        ctx.fillRect(ox + rw - 2 * px, oy + rh - 3 * py, 2 * px, 3 * py);
+
+        ctx.fillStyle = skin.body;
+        ctx.fillRect(ox + px, oy + 2 * py, rw - 2 * px, rh - 3 * py);
+        ctx.fillStyle = skin.roof;
+        ctx.fillRect(ox + 3 * px, oy + 4 * py, rw - 6 * px, 4 * py);
+        ctx.fillStyle = "#203a61";
+        ctx.fillRect(ox + 4 * px, oy + 5 * py, rw - 8 * px, 2 * py);
+        ctx.fillStyle = skin.trim;
+        ctx.fillRect(ox + 2 * px, oy + 9 * py, rw - 4 * px, py);
+
+        ctx.fillStyle = "#f9ffb5";
+        ctx.fillRect(ox + 2 * px, oy + rh - 2 * py, 2 * px, py);
+        ctx.fillRect(ox + rw - 4 * px, oy + rh - 2 * py, 2 * px, py);
+        ctx.fillStyle = "#ff4d6d";
+        ctx.fillRect(ox + 2 * px, oy + py, 2 * px, py);
+        ctx.fillRect(ox + rw - 4 * px, oy + py, 2 * px, py);
+      },
+      drawObstacles() {
+        const sorted = [...this.obstacles].sort((a, b) => b.depth - a.depth);
+        for (const obstacle of sorted) {
+          const t = clamp(1 - obstacle.depth, 0, 1);
+          const xCenter = this.laneCenter(obstacle.lane, t);
+          const y = this.horizonY + t * (this.roadBottomY - this.horizonY);
+          const w = 8 + t * 18;
+          const h = 10 + t * 28;
+          this.drawCar(xCenter - w / 2, y - h, w, h, this.skins[obstacle.skin]);
+        }
+      },
+      drawPlayer() {
+        const xCenter = this.laneCenter(this.playerLane, 1);
+        const w = 28;
+        const h = 42;
+        const y = this.roadBottomY - h;
+        this.drawCar(xCenter - w / 2, y, w, h, this.playerSkin);
+      },
+      draw() {
+        this.drawRoad();
+        this.drawObstacles();
+        this.drawPlayer();
+
+        drawLabel(`POANG ${this.score}`, 10, 14);
+        drawLabel(`REKORD ${this.highScore}`, 10, 27);
+
+        if (!this.running) {
+          ctx.fillStyle = "rgba(0,0,0,0.65)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("KRASCH!", 187, 126, "#ff5d73");
+          drawLabel("SPACE FOR NY RUNDA", 116, 146, "#f0f4ff");
+        }
+      }
+    };
+
