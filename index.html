@@ -810,15 +810,12 @@
       return angle;
     }
 
+    // Use videos that are generally embeddable (many music videos block iframe embedding).
     const fullscreenVideoIds = [
-      "dQw4w9WgXcQ",
-      "L_jWHffIx5E",
-      "fJ9rUzIMcZQ",
-      "hTWKbfoikeg",
-      "9bZkp7q19f0",
-      "ktvTqknDobU",
-      "kJQP7kiw5Fk",
-      "YQHsXMglC9A"
+      "M7lc1UVf-VE",
+      "BaW_jenozKc",
+      "jNQXAC9IVRw",
+      "aqz-KE-bpKQ"
     ];
 
     function clearFullscreenGateTimer() {
@@ -850,7 +847,7 @@
         videoGateCountdown.textContent = "Vanta 10 sekunder...";
         videoGateContinueBtn.disabled = true;
         const videoId = pickFullscreenVideoId();
-        videoGateFrame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+        videoGateFrame.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
         unlockPointerFromGame();
         videoGate.classList.add("show");
         videoGate.setAttribute("aria-hidden", "false");
