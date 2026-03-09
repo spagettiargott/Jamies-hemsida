@@ -665,6 +665,31 @@
       display: none;
     }
 
+    .pong-side-panel {
+      display: none;
+      width: 104px;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .pong-side-btn {
+      min-height: 48px;
+      font-size: 0.54rem;
+      padding: 8px 6px;
+      background: #f0f4ff;
+      color: #06111f;
+    }
+
+    .game-view.pong-layout:not(.mobile-landscape) .game-layout {
+      grid-template-columns: minmax(0, 1fr) 104px;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .game-view.pong-layout:not(.mobile-landscape) .pong-side-panel {
+      display: grid;
+    }
+
     .mobile-rotate-lock {
       position: absolute;
       inset: 0;
@@ -711,6 +736,10 @@
       .game-view.mobile-landscape .game-layout {
         grid-template-columns: minmax(80px, 22vw) minmax(0, 1fr) minmax(116px, 32vw);
         gap: 8px;
+      }
+
+      .game-view.pong-layout:not(.mobile-landscape) .game-layout {
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .mobile-stick {
@@ -868,6 +897,11 @@
             </div>
           </aside>
         </div>
+        <aside class="pong-side-panel" id="pongSidePanel" aria-hidden="true">
+          <button class="pong-side-btn" id="pongRestartBtn" type="button">Starta om</button>
+          <button class="pong-side-btn" id="pongPauseBtn" type="button">Pausa</button>
+          <button class="pong-side-btn" id="pongMenuBtn" type="button">Meny</button>
+        </aside>
       </div>
     </section>
   </main>
@@ -921,6 +955,10 @@
     const mobileRotateLock = document.getElementById("mobileRotateLock");
     const moveStick = document.getElementById("moveStick");
     const lookStick = document.getElementById("lookStick");
+    const pongSidePanel = document.getElementById("pongSidePanel");
+    const pongRestartBtn = document.getElementById("pongRestartBtn");
+    const pongPauseBtn = document.getElementById("pongPauseBtn");
+    const pongMenuBtn = document.getElementById("pongMenuBtn");
     const mobileButtons = {
       a: document.getElementById("mobileBtnA"),
       b: document.getElementById("mobileBtnB"),
@@ -1629,7 +1667,7 @@
 
     const pong = {
       title: "Pong Breakout",
-      hint: "Mus: flytta plattan. Klicka for att starta om efter game over.",
+      hint: "Mus: flytta plattan. Sida: starta om, pausa, meny.",
       highScore: 0,
       paddle: { w: 82, h: 8, x: 0, y: 0 },
       ball: { x: 0, y: 0, r: 5, vx: 0, vy: 0 },
@@ -1637,9 +1675,11 @@
       bricks: [],
       score: 0,
       running: true,
+      paused: false,
       init() {
         this.score = 0;
         this.running = true;
+        this.paused = false;
         this.paddle.x = canvas.width / 2 - this.paddle.w / 2;
         this.paddle.y = canvas.height - 18;
         this.buildBricks();
@@ -1674,7 +1714,12 @@
         this.paddle.x = clamp(mouseX - this.paddle.w / 2, 0, canvas.width - this.paddle.w);
       },
       onClick() {
+        if (this.paused) return;
         if (!this.running) this.init();
+      },
+      togglePause() {
+        if (!this.running) return;
+        this.paused = !this.paused;
       },
       reflectFromBrick(brick) {
         const nearestX = clamp(this.ball.x, brick.x, brick.x + brick.w);
@@ -1690,7 +1735,7 @@
         return true;
       },
       update(dtScale) {
-        if (!this.running) return;
+        if (!this.running || this.paused) return;
 
         this.ball.x += this.ball.vx * dtScale;
         this.ball.y += this.ball.vy * dtScale;
@@ -1759,6 +1804,11 @@
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           drawLabel("GAME OVER", 155, 126, "#ff5d73");
           drawLabel("KLICKA FOR NY RUNDA", 95, 146, "#f0f4ff");
+        } else if (this.paused) {
+          ctx.fillStyle = "rgba(0,0,0,0.62)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("PAUSAT", 176, 126, "#f0f4ff");
+          drawLabel("FORTSATT VIA SIDAN", 98, 146, "#f0f4ff");
         }
       }
     };
@@ -5783,12 +5833,21 @@
       creatorUI.classList.toggle("show", visible);
     }
 
+    function updatePongLayout() {
+      const showPongLayout = app.mode === "game" && app.currentKey === "pong";
+      gameView.classList.toggle("pong-layout", showPongLayout);
+      pongSidePanel.setAttribute("aria-hidden", showPongLayout ? "false" : "true");
+      if (!showPongLayout) return;
+      pongPauseBtn.textContent = pong.paused ? "Fortsatt" : "Pausa";
+    }
+
     function setMode(mode) {
       app.mode = mode;
       const inMenu = mode === "menu";
       menu.style.display = inMenu ? "block" : "none";
       gameView.style.display = inMenu ? "none" : "block";
       updateMobileControllerVisibility();
+      updatePongLayout();
     }
 
     function startGame(key) {
@@ -5804,6 +5863,7 @@
       resetVirtualInput();
       game.init();
       setMode("game");
+      updatePongLayout();
       lockPointerToGame();
     }
 
@@ -5820,6 +5880,7 @@
       configureMobileControllerForGame("");
       resetVirtualInput();
       setMode("menu");
+      updatePongLayout();
     }
 
     function updateFullscreenButtons() {
@@ -5845,6 +5906,20 @@
 
     document.querySelectorAll("[data-game]").forEach((btn) => {
       btn.addEventListener("click", () => startGame(btn.dataset.game));
+    });
+    pongRestartBtn.addEventListener("click", () => {
+      if (app.mode !== "game" || app.currentKey !== "pong") return;
+      pong.init();
+      updatePongLayout();
+    });
+    pongPauseBtn.addEventListener("click", () => {
+      if (app.mode !== "game" || app.currentKey !== "pong") return;
+      pong.togglePause();
+      updatePongLayout();
+    });
+    pongMenuBtn.addEventListener("click", () => {
+      if (app.mode !== "game" || app.currentKey !== "pong") return;
+      backToMenu();
     });
     backBtn.addEventListener("click", backToMenu);
     fullscreenButtons.forEach((button) => button.addEventListener("click", toggleFullscreen));
@@ -5963,6 +6038,7 @@
       ctx.imageSmoothingEnabled = false;
       if (app.mode === "game" && app.currentGame) {
         updateMobileControllerVisibility();
+        updatePongLayout();
         if (isMobilePortraitLockActive()) {
           requestAnimationFrame(frame);
           return;
