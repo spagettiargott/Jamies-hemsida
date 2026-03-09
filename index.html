@@ -575,23 +575,47 @@
       touch-action: none;
     }
 
-    .mobile-controller {
-      display: none;
+    .game-layout {
       margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr;
       gap: 10px;
-      align-items: end;
-      justify-content: space-between;
+      align-items: center;
+    }
+
+    .game-center {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .mobile-controller {
+      display: contents;
+    }
+
+    .mobile-side {
+      display: none;
       user-select: none;
       -webkit-user-select: none;
       touch-action: none;
     }
 
-    .mobile-controller.show {
+    .mobile-controller.show .mobile-side {
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .mobile-side-right {
+      align-items: stretch;
+      gap: 8px;
     }
 
     .mobile-stick {
-      width: min(32vw, 142px);
+      width: min(30vw, 142px);
       aspect-ratio: 1 / 1;
       border-radius: 50%;
       border: 3px solid #34557f;
@@ -618,8 +642,8 @@
     }
 
     .mobile-action-pad {
-      flex: 1 1 auto;
-      max-width: 360px;
+      width: 100%;
+      max-width: 300px;
       display: grid;
       grid-template-columns: repeat(3, minmax(54px, 1fr));
       gap: 8px;
@@ -641,13 +665,56 @@
       display: none;
     }
 
+    .mobile-rotate-lock {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      border: 4px solid #385b8a;
+      box-shadow: inset 0 0 0 2px #1a2f4d;
+      background: rgba(5, 12, 24, 0.96);
+      color: #e8f1ff;
+      padding: 14px;
+      font-size: clamp(0.58rem, 2.2vw, 0.74rem);
+      line-height: 1.8;
+      text-transform: uppercase;
+    }
+
+    .game-view.mobile-landscape .game-layout {
+      grid-template-columns: minmax(86px, 21vw) minmax(0, 1fr) minmax(126px, 30vw);
+    }
+
+    .game-view.mobile-landscape .mobile-action-pad {
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(52px, 1fr));
+    }
+
+    .game-view.mobile-landscape .mobile-stick {
+      width: min(18vw, 132px);
+    }
+
+    .game-view.mobile-portrait-lock .mobile-rotate-lock {
+      display: flex;
+    }
+
+    .game-view.mobile-portrait-lock .game-center canvas {
+      visibility: hidden;
+    }
+
+    .game-view.mobile-portrait-lock .mobile-side {
+      display: none !important;
+    }
+
     @media (max-width: 760px) {
-      .mobile-controller {
+      .game-view.mobile-landscape .game-layout {
+        grid-template-columns: minmax(80px, 22vw) minmax(0, 1fr) minmax(116px, 32vw);
         gap: 8px;
       }
 
       .mobile-stick {
-        width: min(35vw, 126px);
+        width: min(34vw, 122px);
       }
 
       .mobile-action-pad {
@@ -774,21 +841,32 @@
           <button class="full-btn" id="randomCreatureBtn">Slumpa</button>
         </div>
       </div>
-      <canvas id="game" width="480" height="270" aria-label="Spelcanvas"></canvas>
-      <div class="mobile-controller" id="mobileController" aria-hidden="true">
-        <div class="mobile-stick" id="moveStick" aria-label="Rorelse">
-          <div class="mobile-stick-knob"></div>
-        </div>
-        <div class="mobile-action-pad" id="mobileActionPad">
-          <button class="play-btn mobile-btn" id="mobileBtnX" type="button">X</button>
-          <button class="play-btn mobile-btn" id="mobileBtnY" type="button">Y</button>
-          <button class="full-btn mobile-btn" id="mobileBtnStart" type="button">Start</button>
-          <button class="play-btn mobile-btn" id="mobileBtnA" type="button">A</button>
-          <button class="play-btn mobile-btn" id="mobileBtnB" type="button">B</button>
-          <button class="back-btn mobile-btn" id="mobileBtnFire" type="button">Fire</button>
-        </div>
-        <div class="mobile-stick" id="lookStick" aria-label="Kamera">
-          <div class="mobile-stick-knob"></div>
+      <div class="game-layout" id="gameLayout">
+        <div class="mobile-controller" id="mobileController" aria-hidden="false">
+          <aside class="mobile-side mobile-side-left">
+            <div class="mobile-stick" id="moveStick" aria-label="Rorelse">
+              <div class="mobile-stick-knob"></div>
+            </div>
+          </aside>
+          <div class="game-center">
+            <canvas id="game" width="480" height="270" aria-label="Spelcanvas"></canvas>
+            <div class="mobile-rotate-lock" id="mobileRotateLock" aria-hidden="true">
+              VAND TELEFONEN TILL LANDSKAP FOR ATT SPELA.
+            </div>
+          </div>
+          <aside class="mobile-side mobile-side-right">
+            <div class="mobile-action-pad" id="mobileActionPad">
+              <button class="play-btn mobile-btn" id="mobileBtnX" type="button">X</button>
+              <button class="play-btn mobile-btn" id="mobileBtnY" type="button">Y</button>
+              <button class="full-btn mobile-btn" id="mobileBtnStart" type="button">Start</button>
+              <button class="play-btn mobile-btn" id="mobileBtnA" type="button">A</button>
+              <button class="play-btn mobile-btn" id="mobileBtnB" type="button">B</button>
+              <button class="back-btn mobile-btn" id="mobileBtnFire" type="button">Fire</button>
+            </div>
+            <div class="mobile-stick" id="lookStick" aria-label="Kamera">
+              <div class="mobile-stick-knob"></div>
+            </div>
+          </aside>
         </div>
       </div>
     </section>
@@ -840,6 +918,7 @@
     const videoGateContinueBtn = document.getElementById("videoGateContinueBtn");
     const videoGateCloseBtn = document.getElementById("videoGateCloseBtn");
     const mobileController = document.getElementById("mobileController");
+    const mobileRotateLock = document.getElementById("mobileRotateLock");
     const moveStick = document.getElementById("moveStick");
     const lookStick = document.getElementById("lookStick");
     const mobileButtons = {
@@ -1283,14 +1362,29 @@
       }
     }
 
+    function isMobileLandscape() {
+      return window.matchMedia("(orientation: landscape)").matches;
+    }
+
+    function isMobilePortraitLockActive() {
+      return app.mobileEnabled && app.mode === "game" && !isMobileLandscape();
+    }
+
     function shouldShowMobileController() {
-      return app.mobileEnabled && app.mode === "game";
+      return app.mobileEnabled && app.mode === "game" && !isMobilePortraitLockActive();
     }
 
     function updateMobileControllerVisibility() {
+      const portraitLock = isMobilePortraitLockActive();
       const show = shouldShowMobileController();
+
       mobileController.classList.toggle("show", show);
-      mobileController.setAttribute("aria-hidden", show ? "false" : "true");
+      gameView.classList.toggle("mobile-landscape", show);
+      gameView.classList.toggle("mobile-portrait-lock", portraitLock);
+      if (mobileRotateLock) {
+        mobileRotateLock.setAttribute("aria-hidden", portraitLock ? "false" : "true");
+      }
+      if (portraitLock) resetVirtualInput();
     }
 
     function getMobileProfile(key) {
@@ -5830,6 +5924,9 @@
       if (document.hidden) resetVirtualInput();
     });
 
+    window.addEventListener("resize", updateMobileControllerVisibility);
+    window.addEventListener("orientationchange", updateMobileControllerVisibility);
+
     function frame(ts) {
       const dt = Math.min(34, ts - (app.lastTs || ts));
       app.lastTs = ts;
@@ -5837,6 +5934,10 @@
 
       ctx.imageSmoothingEnabled = false;
       if (app.mode === "game" && app.currentGame) {
+        if (isMobilePortraitLockActive()) {
+          requestAnimationFrame(frame);
+          return;
+        }
         applyMobileLook(dtScale);
         app.currentGame.update(dtScale);
         app.currentGame.draw();
