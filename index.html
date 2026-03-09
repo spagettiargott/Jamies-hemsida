@@ -929,7 +929,19 @@
       fire: document.getElementById("mobileBtnFire"),
       start: document.getElementById("mobileBtnStart")
     };
-    const supportsMobileController = window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches;
+    function detectMobileCapability() {
+      const ua = navigator.userAgent || "";
+      const uaMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+      return (
+        uaMobile ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.matchMedia("(any-pointer: coarse)").matches ||
+        window.matchMedia("(hover: none)").matches
+      );
+    }
+
+    const supportsMobileController = detectMobileCapability();
 
     const app = {
       mode: "menu",
@@ -938,7 +950,8 @@
       lastTs: 0,
       mouseX: canvas.width * 0.5,
       mouseY: canvas.height * 0.5,
-      mobileEnabled: supportsMobileController
+      mobileEnabled: supportsMobileController,
+      mobilePortraitLock: false
     };
 
     const fullscreenGate = {
@@ -1363,7 +1376,10 @@
     }
 
     function isMobileLandscape() {
-      return window.matchMedia("(orientation: landscape)").matches;
+      const vv = window.visualViewport;
+      const width = vv ? vv.width : window.innerWidth;
+      const height = vv ? vv.height : window.innerHeight;
+      return width > height;
     }
 
     function isMobilePortraitLockActive() {
@@ -1374,7 +1390,12 @@
       return app.mobileEnabled && app.mode === "game" && !isMobilePortraitLockActive();
     }
 
+    function refreshMobileCapability() {
+      app.mobileEnabled = detectMobileCapability();
+    }
+
     function updateMobileControllerVisibility() {
+      refreshMobileCapability();
       const portraitLock = isMobilePortraitLockActive();
       const show = shouldShowMobileController();
 
@@ -1384,7 +1405,8 @@
       if (mobileRotateLock) {
         mobileRotateLock.setAttribute("aria-hidden", portraitLock ? "false" : "true");
       }
-      if (portraitLock) resetVirtualInput();
+      if (portraitLock && !app.mobilePortraitLock) resetVirtualInput();
+      app.mobilePortraitLock = portraitLock;
     }
 
     function getMobileProfile(key) {
@@ -5926,6 +5948,12 @@
 
     window.addEventListener("resize", updateMobileControllerVisibility);
     window.addEventListener("orientationchange", updateMobileControllerVisibility);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateMobileControllerVisibility);
+    }
+    if (screen.orientation && screen.orientation.addEventListener) {
+      screen.orientation.addEventListener("change", updateMobileControllerVisibility);
+    }
 
     function frame(ts) {
       const dt = Math.min(34, ts - (app.lastTs || ts));
@@ -5934,6 +5962,7 @@
 
       ctx.imageSmoothingEnabled = false;
       if (app.mode === "game" && app.currentGame) {
+        updateMobileControllerVisibility();
         if (isMobilePortraitLockActive()) {
           requestAnimationFrame(frame);
           return;
