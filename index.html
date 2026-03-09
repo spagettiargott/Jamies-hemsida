@@ -381,6 +381,32 @@
       transform: rotate(18deg);
     }
 
+    .thumb-mejmut {
+      background: linear-gradient(#77839a 0 40%, #2f333c 40% 100%);
+    }
+
+    .thumb-mejmut::before {
+      width: 120%;
+      height: 76%;
+      left: -10%;
+      bottom: 0;
+      background:
+        repeating-linear-gradient(90deg, #313845 0 10px, #2a313d 10px 20px),
+        linear-gradient(#414b59, #252b36);
+      clip-path: polygon(0 100%, 0 58%, 10% 50%, 24% 58%, 38% 42%, 52% 56%, 66% 44%, 82% 58%, 100% 48%, 100% 100%);
+      box-shadow: inset 0 3px 0 #f07f39;
+    }
+
+    .thumb-mejmut::after {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      left: calc(50% - 6px);
+      top: 34px;
+      background: #ffd166;
+      box-shadow: -34px 6px 0 #4cc9f0, 34px 8px 0 #ff4d6d, -16px 20px 0 #95d5b2, 16px 20px 0 #c77dff;
+    }
+
     .card h2 {
       font-size: 0.84rem;
     }
@@ -854,6 +880,12 @@
           <p>Svinga genom en stor stad med fysikbaserade webs.</p>
           <button class="play-btn" data-game="spider">Spela</button>
         </article>
+        <article class="card">
+          <div class="thumb thumb-mejmut" aria-hidden="true"></div>
+          <h2>Mej-mut Fighting</h2>
+          <p>3D street fighter-inspirerad duell med fem valbara karaktarer.</p>
+          <button class="play-btn" data-game="mejmut">Spela</button>
+        </article>
       </div>
       <p class="menu-sponsors">Sponsorer: Emil Ljungdahl</p>
     </section>
@@ -996,15 +1028,7 @@
       start: document.getElementById("mobileBtnStart")
     };
     function detectMobileCapability() {
-      const ua = navigator.userAgent || "";
-      const uaMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-      return (
-        uaMobile ||
-        navigator.maxTouchPoints > 0 ||
-        window.matchMedia("(pointer: coarse)").matches ||
-        window.matchMedia("(any-pointer: coarse)").matches ||
-        window.matchMedia("(hover: none)").matches
-      );
+      return false;
     }
 
     const supportsMobileController = detectMobileCapability();
@@ -1016,8 +1040,7 @@
       lastTs: 0,
       mouseX: canvas.width * 0.5,
       mouseY: canvas.height * 0.5,
-      mobileEnabled: supportsMobileController,
-      mobilePortraitLock: false
+      mobileEnabled: supportsMobileController
     };
 
     const fullscreenGate = {
@@ -1258,6 +1281,18 @@
           y: { label: "Sprint", type: "key", code: "ShiftLeft", hold: true },
           start: { label: "Start", type: "key", code: "Enter" }
         }
+      },
+      mejmut: {
+        move: true,
+        look: false,
+        buttons: {
+          a: { label: "Punch", type: "key", code: "KeyF" },
+          b: { label: "Kick", type: "key", code: "KeyG" },
+          x: { label: "Special", type: "key", code: "KeyH" },
+          y: { label: "Block", type: "key", code: "KeyQ", hold: true },
+          fire: { label: "Jump", type: "key", code: "Space" },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
       }
     };
 
@@ -1448,12 +1483,8 @@
       return width > height;
     }
 
-    function isMobilePortraitLockActive() {
-      return app.mobileEnabled && app.mode === "game" && !isMobileLandscape();
-    }
-
     function shouldShowMobileController() {
-      return app.mobileEnabled && app.mode === "game" && !isMobilePortraitLockActive();
+      return app.mobileEnabled && app.mode === "game";
     }
 
     function refreshMobileCapability() {
@@ -1462,17 +1493,15 @@
 
     function updateMobileControllerVisibility() {
       refreshMobileCapability();
-      const portraitLock = isMobilePortraitLockActive();
       const show = shouldShowMobileController();
+      const landscapeMode = show && isMobileLandscape();
 
       mobileController.classList.toggle("show", show);
-      gameView.classList.toggle("mobile-landscape", show);
-      gameView.classList.toggle("mobile-portrait-lock", portraitLock);
+      gameView.classList.toggle("mobile-landscape", landscapeMode);
+      gameView.classList.remove("mobile-portrait-lock");
       if (mobileRotateLock) {
-        mobileRotateLock.setAttribute("aria-hidden", portraitLock ? "false" : "true");
+        mobileRotateLock.setAttribute("aria-hidden", "true");
       }
-      if (portraitLock && !app.mobilePortraitLock) resetVirtualInput();
-      app.mobilePortraitLock = portraitLock;
     }
 
     function getMobileProfile(key) {
@@ -5855,7 +5884,589 @@
       }
     };
 
-    const games = { pong, dash, platformer, creator, snake, blaster, flappy, fifa, zombiefps, creed, spider };
+    const mejmut = {
+      title: "Mej-mut Fighting",
+      hint: "Valj figur med A/D eller pilar. Enter startar. I match: A/D flytta, W/upp/Space hoppa, F slag, G spark, H special, Q block.",
+      roster: [
+        { name: "Mej-mut", hp: 120, speed: 1.02, power: 1.08, defense: 1, jump: 6.7, reach: 1.05, c1: "#ff5d73", c2: "#8a1f3f", skin: "#f1c8a2", hair: "#1b1f2a" },
+        { name: "Jamie", hp: 114, speed: 1.16, power: 0.98, defense: 0.96, jump: 7.1, reach: 0.94, c1: "#4cc9f0", c2: "#1b5f8f", skin: "#f0c39a", hair: "#2c374a" },
+        { name: "Emil", hp: 132, speed: 0.91, power: 1.2, defense: 1.1, jump: 6.2, reach: 1.1, c1: "#ff9f43", c2: "#8a4d16", skin: "#efbf98", hair: "#3a2b20" },
+        { name: "Axel", hp: 118, speed: 1.04, power: 1.02, defense: 1.02, jump: 6.8, reach: 1.2, c1: "#7ae582", c2: "#266a34", skin: "#f1c9a7", hair: "#2b4630" },
+        { name: "Malte", hp: 126, speed: 0.98, power: 1.06, defense: 1.14, jump: 6.4, reach: 1, c1: "#c77dff", c2: "#5e2f7f", skin: "#eac09c", hair: "#352245" }
+      ],
+      state: "select",
+      selectedIndex: 0,
+      enemyIndex: 1,
+      playerWins: 0,
+      enemyWins: 0,
+      round: 1,
+      maxWins: 2,
+      timer: 99,
+      timerTick: 0,
+      winnerText: "",
+      aiTimer: 0,
+      impactFlash: 0,
+      cameraShake: 0,
+      particles: [],
+      keys: { left: false, right: false, jump: false, block: false },
+      player: null,
+      enemy: null,
+      init() {
+        this.state = "select";
+        this.selectedIndex = 0;
+        this.enemyIndex = 1;
+        this.playerWins = 0;
+        this.enemyWins = 0;
+        this.round = 1;
+        this.timer = 99;
+        this.timerTick = 0;
+        this.winnerText = "";
+        this.aiTimer = 0;
+        this.impactFlash = 0;
+        this.cameraShake = 0;
+        this.particles = [];
+        this.keys.left = false;
+        this.keys.right = false;
+        this.keys.jump = false;
+        this.keys.block = false;
+        this.player = null;
+        this.enemy = null;
+      },
+      createFighter(profile, side) {
+        return {
+          profile,
+          side,
+          x: side === "left" ? 145 : 335,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          width: 36,
+          height: 82,
+          facing: side === "left" ? 1 : -1,
+          hp: profile.hp,
+          maxHp: profile.hp,
+          moveDir: 0,
+          onGround: true,
+          attackKind: "",
+          attackTimer: 0,
+          attackHit: false,
+          cooldown: 0,
+          stun: 0,
+          combo: 0,
+          comboTimer: 0,
+          specialMeter: 36
+        };
+      },
+      randomEnemyIndex() {
+        if (this.roster.length <= 1) return 0;
+        let idx = this.selectedIndex;
+        while (idx === this.selectedIndex) idx = Math.floor(Math.random() * this.roster.length);
+        return idx;
+      },
+      startMatch() {
+        this.playerWins = 0;
+        this.enemyWins = 0;
+        this.round = 1;
+        this.enemyIndex = this.randomEnemyIndex();
+        this.startRound();
+      },
+      startRound() {
+        this.timer = 99;
+        this.timerTick = 0;
+        this.winnerText = "";
+        this.impactFlash = 0;
+        this.cameraShake = 0;
+        this.aiTimer = 0;
+        this.particles = [];
+        this.keys.left = false;
+        this.keys.right = false;
+        this.keys.jump = false;
+        this.keys.block = false;
+        this.player = this.createFighter(this.roster[this.selectedIndex], "left");
+        this.enemy = this.createFighter(this.roster[this.enemyIndex], "right");
+        this.state = "fight";
+      },
+      attackData(fighter, kind) {
+        const p = fighter.profile;
+        if (kind === "light") return { kind, duration: 14, activeStart: 4, activeEnd: 8, reach: 31 * p.reach, damage: 8 * p.power, push: 2.8, lift: 1.7, stun: 14, meter: 4 };
+        if (kind === "heavy") return { kind, duration: 22, activeStart: 7, activeEnd: 13, reach: 40 * p.reach, damage: 12 * p.power, push: 3.8, lift: 2.6, stun: 20, meter: 7 };
+        return { kind: "special", duration: 28, activeStart: 10, activeEnd: 18, reach: 51 * p.reach, damage: 18 * p.power, push: 4.9, lift: 3.1, stun: 24, meter: -30 };
+      },
+      triggerAttack(fighter, kind) {
+        if (!fighter || fighter.stun > 0 || fighter.cooldown > 0 || fighter.attackTimer > 0) return;
+        if (kind === "special" && fighter.specialMeter < 30) return;
+        const atk = this.attackData(fighter, kind);
+        fighter.attackKind = atk.kind;
+        fighter.attackTimer = atk.duration;
+        fighter.attackHit = false;
+        fighter.cooldown = kind === "light" ? 10 : (kind === "heavy" ? 15 : 26);
+        fighter.specialMeter = clamp(fighter.specialMeter + atk.meter, 0, 100);
+      },
+      processHit(attacker, defender) {
+        if (!attacker || !defender || attacker.attackTimer <= 0 || attacker.attackHit) return;
+        const atk = this.attackData(attacker, attacker.attackKind || "light");
+        const progress = atk.duration - attacker.attackTimer;
+        if (progress < atk.activeStart || progress > atk.activeEnd) return;
+        const distance = Math.abs(attacker.x - defender.x);
+        if (distance > atk.reach || Math.abs(attacker.y - defender.y) > 28) return;
+
+        const blocking = defender.block && defender.facing !== attacker.facing && defender.onGround;
+        const dmg = blocking ? atk.damage * 0.32 : atk.damage / defender.profile.defense;
+        defender.hp = Math.max(0, defender.hp - dmg);
+        defender.stun = Math.max(defender.stun, blocking ? atk.stun * 0.45 : atk.stun);
+        defender.vx += attacker.facing * atk.push * (blocking ? 0.25 : 1);
+        defender.vy += atk.lift * (blocking ? 0.45 : 1);
+        attacker.attackHit = true;
+        attacker.specialMeter = clamp(attacker.specialMeter + 8, 0, 100);
+        attacker.combo = blocking ? 0 : attacker.combo + 1;
+        attacker.comboTimer = blocking ? 0 : 44;
+        this.cameraShake = Math.max(this.cameraShake, blocking ? 2 : 5);
+        this.impactFlash = Math.max(this.impactFlash, blocking ? 0.2 : 0.35);
+        this.spawnImpact((attacker.x + defender.x) * 0.5, 196 - Math.max(attacker.y, defender.y) - 28, blocking ? "#94d2ff" : "#ffd166");
+      },
+      spawnImpact(x, y, color) {
+        for (let i = 0; i < 16; i += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.8 + Math.random() * 2.8;
+          this.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 0.2,
+            life: 20 + Math.random() * 18,
+            color,
+            size: 1 + Math.random() * 3
+          });
+        }
+      },
+      updateParticles(dtScale) {
+        for (const p of this.particles) {
+          p.life -= dtScale;
+          p.x += p.vx * dtScale;
+          p.y += p.vy * dtScale;
+          p.vy += 0.09 * dtScale;
+          p.vx *= Math.pow(0.95, dtScale);
+        }
+        this.particles = this.particles.filter((p) => p.life > 0);
+      },
+      updateFighterState(fighter, opponent, dtScale) {
+        if (!fighter || !opponent) return;
+        const moveAccel = fighter.profile.speed * 0.56 * dtScale;
+        const maxRun = fighter.profile.speed * 2.75;
+        const friction = fighter.onGround ? Math.pow(0.82, dtScale) : Math.pow(0.94, dtScale);
+
+        fighter.facing = opponent.x >= fighter.x ? 1 : -1;
+        if (fighter.stun > 0) fighter.stun = Math.max(0, fighter.stun - dtScale);
+        if (fighter.cooldown > 0) fighter.cooldown = Math.max(0, fighter.cooldown - dtScale);
+        if (fighter.attackTimer > 0) fighter.attackTimer = Math.max(0, fighter.attackTimer - dtScale);
+        if (fighter.attackTimer <= 0) {
+          fighter.attackKind = "";
+          fighter.attackHit = false;
+        }
+        if (fighter.comboTimer > 0) fighter.comboTimer = Math.max(0, fighter.comboTimer - dtScale);
+        else fighter.combo = 0;
+
+        if (fighter.stun <= 0) {
+          fighter.vx += fighter.moveDir * moveAccel;
+          fighter.vx = clamp(fighter.vx, -maxRun, maxRun);
+          if (fighter.onGround && fighter.jumpQueued) {
+            fighter.vy = fighter.profile.jump;
+            fighter.onGround = false;
+          }
+        }
+        fighter.jumpQueued = false;
+
+        fighter.x += fighter.vx * dtScale;
+        fighter.y += fighter.vy * dtScale;
+        fighter.vy -= 0.38 * dtScale;
+
+        if (fighter.y <= 0) {
+          fighter.y = 0;
+          fighter.vy = 0;
+          fighter.onGround = true;
+        } else {
+          fighter.onGround = false;
+        }
+
+        fighter.vx *= friction;
+        fighter.x = clamp(fighter.x, 52, 428);
+      },
+      updatePlayer(dtScale) {
+        if (!this.player) return;
+        this.player.moveDir = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+        this.player.block = this.keys.block;
+        this.player.jumpQueued = this.keys.jump;
+        this.updateFighterState(this.player, this.enemy, dtScale);
+      },
+      updateEnemyAI(dtScale) {
+        if (!this.enemy || !this.player) return;
+        const ai = this.enemy;
+        const human = this.player;
+        const dist = human.x - ai.x;
+        const absDist = Math.abs(dist);
+
+        ai.moveDir = 0;
+        ai.block = false;
+        ai.jumpQueued = false;
+
+        this.aiTimer -= dtScale;
+        if (this.aiTimer <= 0) {
+          this.aiTimer = 6 + Math.random() * 10;
+          if (human.attackTimer > 0 && Math.random() < 0.45) ai.block = true;
+          if (absDist > 62) ai.moveDir = dist > 0 ? 1 : -1;
+          else if (absDist < 34) ai.moveDir = dist > 0 ? -1 : 1;
+          if (ai.onGround && Math.random() < 0.08) ai.jumpQueued = true;
+        }
+
+        if (ai.cooldown <= 0 && ai.attackTimer <= 0 && absDist < 66 && Math.random() < 0.16 * dtScale) {
+          const roll = Math.random();
+          if (roll < 0.5) this.triggerAttack(ai, "light");
+          else if (roll < 0.85) this.triggerAttack(ai, "heavy");
+          else this.triggerAttack(ai, "special");
+        }
+
+        this.updateFighterState(ai, human, dtScale);
+      },
+      updateRound(dtScale) {
+        this.timerTick += dtScale;
+        while (this.timerTick >= 60) {
+          this.timerTick -= 60;
+          this.timer = Math.max(0, this.timer - 1);
+        }
+
+        if (this.player.hp <= 0 || this.enemy.hp <= 0 || this.timer <= 0) {
+          const playerHp = this.player.hp;
+          const enemyHp = this.enemy.hp;
+          if (playerHp > enemyHp) {
+            this.playerWins += 1;
+            this.winnerText = `${this.player.profile.name} vinner ronden`;
+          } else if (enemyHp > playerHp) {
+            this.enemyWins += 1;
+            this.winnerText = `${this.enemy.profile.name} vinner ronden`;
+          } else {
+            this.winnerText = "Oavgjord rond";
+          }
+
+          if (this.playerWins >= this.maxWins || this.enemyWins >= this.maxWins) {
+            this.state = "match-over";
+          } else {
+            this.state = "round-over";
+          }
+        }
+      },
+      nextRound() {
+        this.round += 1;
+        this.enemyIndex = this.randomEnemyIndex();
+        this.startRound();
+      },
+      onClick() {
+        if (this.state === "select") {
+          this.startMatch();
+          return;
+        }
+        if (this.state === "round-over") {
+          this.nextRound();
+          return;
+        }
+        if (this.state === "match-over") {
+          this.init();
+          return;
+        }
+        if (this.state === "fight") this.triggerAttack(this.player, "light");
+      },
+      onKeyDown(code, repeat = false) {
+        if (this.state === "select") {
+          if (!repeat && (code === "ArrowLeft" || code === "KeyA")) {
+            this.selectedIndex = (this.selectedIndex - 1 + this.roster.length) % this.roster.length;
+          }
+          if (!repeat && (code === "ArrowRight" || code === "KeyD")) {
+            this.selectedIndex = (this.selectedIndex + 1) % this.roster.length;
+          }
+          if (!repeat && code === "Digit1") this.selectedIndex = 0;
+          if (!repeat && code === "Digit2") this.selectedIndex = 1;
+          if (!repeat && code === "Digit3") this.selectedIndex = 2;
+          if (!repeat && code === "Digit4") this.selectedIndex = 3;
+          if (!repeat && code === "Digit5") this.selectedIndex = 4;
+          if (code === "Enter" || code === "Space") this.startMatch();
+          return;
+        }
+
+        if (this.state === "round-over") {
+          if (code === "Enter" || code === "Space") this.nextRound();
+          return;
+        }
+
+        if (this.state === "match-over") {
+          if (code === "Enter" || code === "Space") this.init();
+          return;
+        }
+
+        if (this.state !== "fight") return;
+        if (code === "ArrowLeft" || code === "KeyA") this.keys.left = true;
+        if (code === "ArrowRight" || code === "KeyD") this.keys.right = true;
+        if (code === "ArrowUp" || code === "KeyW" || code === "Space") this.keys.jump = true;
+        if (code === "KeyQ") this.keys.block = true;
+        if (code === "KeyF") this.triggerAttack(this.player, "light");
+        if (code === "KeyG") this.triggerAttack(this.player, "heavy");
+        if (code === "KeyH") this.triggerAttack(this.player, "special");
+      },
+      onKeyUp(code) {
+        if (code === "ArrowLeft" || code === "KeyA") this.keys.left = false;
+        if (code === "ArrowRight" || code === "KeyD") this.keys.right = false;
+        if (code === "ArrowUp" || code === "KeyW" || code === "Space") this.keys.jump = false;
+        if (code === "KeyQ") this.keys.block = false;
+      },
+      update(dtScale) {
+        this.impactFlash = Math.max(0, this.impactFlash - 0.05 * dtScale);
+        this.cameraShake = Math.max(0, this.cameraShake - 0.25 * dtScale);
+        this.updateParticles(dtScale);
+
+        if (this.state !== "fight") return;
+
+        this.updatePlayer(dtScale);
+        this.updateEnemyAI(dtScale);
+        this.processHit(this.player, this.enemy);
+        this.processHit(this.enemy, this.player);
+        this.updateRound(dtScale);
+      },
+      drawBackground() {
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#4a5b77");
+        sky.addColorStop(0.5, "#343f56");
+        sky.addColorStop(1, "#1f2736");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const t = performance.now() * 0.00006;
+        for (let i = 0; i < 24; i += 1) {
+          const x = ((i * 87 + t * 160) % (canvas.width + 80)) - 40;
+          const w = 34 + ((i * 17) % 42);
+          const h = 74 + ((i * 31) % 94);
+          ctx.fillStyle = i % 2 ? "#293244" : "#222b3b";
+          ctx.fillRect(Math.round(x), 138 - h, w, h);
+          ctx.fillStyle = "rgba(250,220,130,0.15)";
+          for (let y = 138 - h + 8; y < 138; y += 14) {
+            ctx.fillRect(Math.round(x + 5), y, Math.max(2, w - 10), 3);
+          }
+        }
+
+        const road = ctx.createLinearGradient(0, 140, 0, canvas.height);
+        road.addColorStop(0, "#2f3138");
+        road.addColorStop(1, "#1a1b22");
+        ctx.fillStyle = road;
+        ctx.fillRect(0, 140, canvas.width, canvas.height - 140);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        for (let i = 0; i <= 14; i += 1) {
+          const y = 142 + i * 9;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#f58b2f";
+        for (let i = 0; i < canvas.width; i += 56) {
+          ctx.fillRect(i + 8, 196, 28, 4);
+        }
+
+        ctx.fillStyle = "rgba(18,24,36,0.9)";
+        ctx.fillRect(0, 130, canvas.width, 12);
+        for (let i = 0; i < 80; i += 1) {
+          const x = (i * 19 + 7) % canvas.width;
+          const h = 4 + (i % 3) * 3;
+          ctx.fillRect(x, 130 - h, 3, h);
+        }
+      },
+      drawFighter(fighter) {
+        if (!fighter) return;
+        const x = fighter.x + (Math.random() - 0.5) * this.cameraShake;
+        const groundY = 206 - fighter.y + (Math.random() - 0.5) * this.cameraShake;
+        const dir = fighter.facing;
+        const c1 = fighter.profile.c1;
+        const c2 = fighter.profile.c2;
+
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(x, 212, 18 + Math.abs(fighter.vx) * 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        let handReach = 0;
+        if (fighter.attackTimer > 0) {
+          const atk = this.attackData(fighter, fighter.attackKind || "light");
+          const progress = atk.duration - fighter.attackTimer;
+          if (progress >= atk.activeStart && progress <= atk.activeEnd) {
+            handReach = (atk.reach - 26) * 0.45;
+          }
+        }
+
+        const legSwing = Math.sin(performance.now() * 0.012 + x * 0.05) * Math.min(5, Math.abs(fighter.vx) * 2.2);
+        const bodyW = 24;
+        const bodyH = 34;
+        const headR = 11;
+        const baseY = groundY - bodyH;
+
+        ctx.fillStyle = c2;
+        ctx.fillRect(Math.round(x - bodyW * 0.5 - 2), Math.round(baseY - 2), bodyW + 4, bodyH + 4);
+        ctx.fillStyle = c1;
+        ctx.fillRect(Math.round(x - bodyW * 0.5), Math.round(baseY), bodyW, bodyH);
+
+        ctx.fillStyle = fighter.profile.skin;
+        const armY = baseY + 9;
+        ctx.fillRect(Math.round(x - 18 + dir * handReach), Math.round(armY + legSwing * 0.15), 8, 20);
+        ctx.fillRect(Math.round(x + 10 + dir * handReach * 0.5), Math.round(armY - legSwing * 0.15), 8, 20);
+
+        ctx.fillStyle = c2;
+        ctx.fillRect(Math.round(x - 13), Math.round(groundY - 4), 10, 24);
+        ctx.fillRect(Math.round(x + 3), Math.round(groundY - 4), 10, 24);
+        ctx.fillStyle = c1;
+        ctx.fillRect(Math.round(x - 12), Math.round(groundY - 6 + legSwing * 0.2), 8, 24);
+        ctx.fillRect(Math.round(x + 4), Math.round(groundY - 6 - legSwing * 0.2), 8, 24);
+
+        ctx.fillStyle = fighter.profile.skin;
+        ctx.beginPath();
+        ctx.arc(x, baseY - headR + 2, headR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = fighter.profile.hair;
+        ctx.beginPath();
+        ctx.arc(x, baseY - headR + 1, headR + 1, Math.PI, 0, false);
+        ctx.fill();
+
+        ctx.fillStyle = "#f0f4ff";
+        ctx.fillRect(Math.round(x - 8), Math.round(baseY + 13), 16, 3);
+        if (fighter.block) {
+          ctx.strokeStyle = "#8de0ff";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(Math.round(x - 21), Math.round(baseY + 4), 42, 40);
+        }
+      },
+      drawParticles() {
+        for (const p of this.particles) {
+          ctx.globalAlpha = clamp(p.life / 24, 0, 1);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+        }
+        ctx.globalAlpha = 1;
+      },
+      drawHud() {
+        if (!this.player || !this.enemy) return;
+        const pRatio = this.player.hp / this.player.maxHp;
+        const eRatio = this.enemy.hp / this.enemy.maxHp;
+
+        ctx.fillStyle = "#0a0f1d";
+        ctx.fillRect(18, 12, 170, 18);
+        ctx.fillRect(canvas.width - 188, 12, 170, 18);
+
+        ctx.fillStyle = "#26d391";
+        ctx.fillRect(20, 14, 166 * clamp(pRatio, 0, 1), 14);
+        ctx.fillStyle = "#ff5d73";
+        const enemyWidth = 166 * clamp(eRatio, 0, 1);
+        ctx.fillRect(canvas.width - 22 - enemyWidth, 14, enemyWidth, 14);
+
+        ctx.fillStyle = "#0a0f1d";
+        ctx.fillRect(18, 34, 170, 6);
+        ctx.fillRect(canvas.width - 188, 34, 170, 6);
+        ctx.fillStyle = "#4cc9f0";
+        ctx.fillRect(20, 35, 166 * (this.player.specialMeter / 100), 4);
+        ctx.fillRect(canvas.width - 186, 35, 166 * (this.enemy.specialMeter / 100), 4);
+
+        drawLabel(this.player.profile.name.toUpperCase(), 20, 10, "#f0f4ff");
+        drawLabel(this.enemy.profile.name.toUpperCase(), canvas.width - 180, 10, "#f0f4ff");
+        drawLabel(`TID ${this.timer}`, canvas.width * 0.5 - 34, 22, "#ffd166");
+        drawLabel(`ROND ${this.round}`, canvas.width * 0.5 - 42, 36, "#d7e6ff");
+
+        for (let i = 0; i < this.maxWins; i += 1) {
+          ctx.fillStyle = i < this.playerWins ? "#ffd166" : "#33415a";
+          ctx.fillRect(20 + i * 12, 44, 9, 5);
+          ctx.fillStyle = i < this.enemyWins ? "#ffd166" : "#33415a";
+          ctx.fillRect(canvas.width - 30 - i * 12, 44, 9, 5);
+        }
+
+        if (this.player.combo > 1) drawLabel(`COMBO x${this.player.combo}`, 20, 58, "#ffcf6e");
+      },
+      drawSelectScreen() {
+        const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bg.addColorStop(0, "#1a2335");
+        bg.addColorStop(1, "#0d1320");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawLabel("MEJ-MUT FIGHTING", 112, 30, "#ffd166");
+        drawLabel("VALJ KARAKTAR", 148, 48, "#e8f1ff");
+
+        const cardW = 84;
+        const gap = 8;
+        const startX = (canvas.width - (cardW * this.roster.length + gap * (this.roster.length - 1))) * 0.5;
+        for (let i = 0; i < this.roster.length; i += 1) {
+          const c = this.roster[i];
+          const x = startX + i * (cardW + gap);
+          const y = 72;
+          const selected = i === this.selectedIndex;
+          ctx.fillStyle = selected ? "#ffd166" : "#36465f";
+          ctx.fillRect(x, y, cardW, 128);
+          ctx.fillStyle = "#0f1828";
+          ctx.fillRect(x + 3, y + 3, cardW - 6, 122);
+          ctx.fillStyle = c.c1;
+          ctx.fillRect(x + 12, y + 24, cardW - 24, 52);
+          ctx.fillStyle = c.skin;
+          ctx.beginPath();
+          ctx.arc(x + cardW * 0.5, y + 20, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = c.hair;
+          ctx.fillRect(x + cardW * 0.5 - 8, y + 8, 16, 6);
+          ctx.fillStyle = "#dce8ff";
+          drawLabel(c.name.toUpperCase(), x + 7, y + 94, selected ? "#ffd166" : "#dce8ff");
+          drawLabel(`POW ${Math.round(c.power * 100)}`, x + 7, y + 109, "#9bd4ff");
+          drawLabel(`SPD ${Math.round(c.speed * 100)}`, x + 7, y + 122, "#9bd4ff");
+        }
+
+        drawLabel("A/D ELLER PILAR: VALJ", 108, 236, "#e8f1ff");
+        drawLabel("ENTER/SPACE: STARTA MATCH", 76, 252, "#e8f1ff");
+      },
+      drawFight() {
+        this.drawBackground();
+        this.drawHud();
+
+        const leftFirst = this.player.x <= this.enemy.x;
+        if (leftFirst) {
+          this.drawFighter(this.player);
+          this.drawFighter(this.enemy);
+        } else {
+          this.drawFighter(this.enemy);
+          this.drawFighter(this.player);
+        }
+        this.drawParticles();
+
+        if (this.impactFlash > 0) {
+          ctx.fillStyle = `rgba(255,240,180,${this.impactFlash * 0.24})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      },
+      drawRoundState(text, sub) {
+        ctx.fillStyle = "rgba(0,0,0,0.56)";
+        ctx.fillRect(64, 92, canvas.width - 128, 86);
+        drawLabel(text.toUpperCase(), 108, 126, "#ffd166");
+        drawLabel(sub.toUpperCase(), 86, 148, "#f0f4ff");
+      },
+      draw() {
+        if (this.state === "select") {
+          this.drawSelectScreen();
+          return;
+        }
+
+        this.drawFight();
+
+        if (this.state === "round-over") {
+          this.drawRoundState(this.winnerText || "Rond klar", "Tryck Enter for nasta rond");
+        } else if (this.state === "match-over") {
+          const playerWon = this.playerWins > this.enemyWins;
+          const headline = playerWon ? `${this.player.profile.name} tar matchen` : `${this.enemy.profile.name} tar matchen`;
+          this.drawRoundState(headline, "Tryck Enter for ny match");
+        }
+      }
+    };
+
+    const games = { pong, dash, platformer, creator, snake, blaster, flappy, fifa, zombiefps, creed, spider, mejmut };
 
     function setCreatorUIVisible(visible) {
       creatorUI.classList.toggle("show", visible);
@@ -6030,7 +6641,7 @@
         "Space", "Enter", "Tab",
         "KeyA", "KeyD", "KeyW", "KeyS", "KeyQ", "KeyE", "KeyF", "KeyG", "KeyH",
         "ShiftLeft", "ShiftRight",
-        "Digit1", "Digit2", "Digit3", "Digit4"
+        "Digit1", "Digit2", "Digit3", "Digit4", "Digit5"
       ].includes(e.code)) {
         e.preventDefault();
       }
@@ -6067,10 +6678,6 @@
       if (app.mode === "game" && app.currentGame) {
         updateMobileControllerVisibility();
         updatePongLayout();
-        if (isMobilePortraitLockActive()) {
-          requestAnimationFrame(frame);
-          return;
-        }
         applyMobileLook(dtScale);
         app.currentGame.update(dtScale);
         app.currentGame.draw();
