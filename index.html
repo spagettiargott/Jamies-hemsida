@@ -105,6 +105,26 @@
       align-content: start;
     }
 
+    .card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .mobile-note {
+      display: inline-block;
+      border: 2px solid #2f6f66;
+      background: #102d29;
+      color: #7ef2cf;
+      font-size: clamp(0.46rem, 1vw, 0.52rem);
+      line-height: 1.2;
+      padding: 4px 6px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: inset 0 0 0 1px #0a1d1b;
+    }
+
     .thumb {
       height: 88px;
       border: 3px solid #2e4d73;
@@ -525,9 +545,7 @@
       display: none !important;
     }
 
-    .game-view:fullscreen .mobile-side,
     .game-view:fullscreen .mobile-rotate-lock,
-    .game-view:-webkit-full-screen .mobile-side,
     .game-view:-webkit-full-screen .mobile-rotate-lock {
       display: none !important;
     }
@@ -556,6 +574,34 @@
       border: none;
       box-shadow: none;
       margin: 0;
+    }
+
+    .game-view.mobile-landscape:fullscreen .game-layout,
+    .game-view.mobile-landscape:-webkit-full-screen .game-layout {
+      display: grid;
+      grid-template-columns: minmax(86px, 21vw) minmax(0, 1fr) minmax(126px, 30vw);
+      gap: 8px;
+      align-items: center;
+      height: 100%;
+      padding: 8px;
+    }
+
+    .game-view.mobile-landscape:fullscreen .mobile-controller.show .mobile-side,
+    .game-view.mobile-landscape:-webkit-full-screen .mobile-controller.show .mobile-side {
+      display: flex !important;
+    }
+
+    .game-view.mobile-landscape:fullscreen .mobile-rotate-lock,
+    .game-view.mobile-landscape:-webkit-full-screen .mobile-rotate-lock {
+      display: none !important;
+    }
+
+    .game-view.mobile-landscape:fullscreen canvas,
+    .game-view.mobile-landscape:-webkit-full-screen canvas {
+      width: 100%;
+      height: auto;
+      max-height: calc(100vh - 16px);
+      aspect-ratio: 16 / 9;
     }
 
     .video-gate {
@@ -618,6 +664,67 @@
     .video-gate-actions button[disabled] {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    .startup-gate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(4, 8, 14, 0.9);
+      z-index: 4100;
+    }
+
+    .startup-gate.show {
+      display: flex;
+    }
+
+    .startup-panel {
+      width: min(520px, 96vw);
+      border: 4px solid #3d5e88;
+      box-shadow: inset 0 0 0 4px #0c1729, 0 20px 28px rgba(0, 0, 0, 0.52);
+      background: #0c1729;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .startup-panel p {
+      margin: 0;
+      font-size: clamp(0.56rem, 1.5vw, 0.68rem);
+      line-height: 1.7;
+      color: #dce8ff;
+    }
+
+    .startup-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .startup-panel label {
+      font-size: clamp(0.52rem, 1.3vw, 0.62rem);
+      color: #e8f1ff;
+      line-height: 1.5;
+    }
+
+    .startup-panel select,
+    .startup-panel input {
+      width: 100%;
+      border: 2px solid #33547d;
+      background: #0e1c33;
+      color: #eaf2ff;
+      font: inherit;
+      min-height: 32px;
+      padding: 6px 8px;
+    }
+
+    .startup-code-status {
+      min-height: 16px;
+      color: #ffbf46;
+      font-size: clamp(0.52rem, 1.2vw, 0.58rem);
+      line-height: 1.5;
     }
 
     canvas {
@@ -815,14 +922,17 @@
   <main class="app">
     <section class="menu" id="menu">
       <div class="menu-top">
-        <h1>Arcade Hub</h1>
+        <h1 id="menuTitle">Arcade Hub</h1>
       </div>
-      <p>Valj spel i retrostil och forsok sla rekord.</p>
+      <p id="menuIntro">Valj spel i retrostil och forsok sla rekord.</p>
       <div class="cards">
         <article class="card">
           <div class="thumb thumb-pong" aria-hidden="true"></div>
-          <h2>Pong Breakout</h2>
-          <p>Styr plattan med musen och krossa klossarna.</p>
+          <div class="card-head">
+            <h2>Pong Breakout</h2>
+            <span class="mobile-note">Mobile Support</span>
+          </div>
+          <p>Styr plattan med mus, touch eller mobilstick och krossa klossarna.</p>
           <button class="play-btn" data-game="pong">Spela</button>
         </article>
         <article class="card">
@@ -892,7 +1002,7 @@
           <button class="play-btn" data-game="mejmut">Spela</button>
         </article>
       </div>
-      <p class="menu-sponsors">Sponsorer: Emil Ljungdahl</p>
+      <p class="menu-sponsors" id="menuSponsors">Sponsorer: Emil Ljungdahl</p>
     </section>
 
     <section class="game-view" id="gameView">
@@ -975,8 +1085,8 @@
     <div class="video-gate-panel">
       <div class="video-gate-head">
         <div>
-          <div class="video-gate-title">Helskarmslas</div>
-          <div>Se 10 sekunder av videon for att lasa upp helskarm.</div>
+          <div class="video-gate-title" id="videoGateTitle">Helskarmslas</div>
+          <div id="videoGateDesc">Se 10 sekunder av videon for att lasa upp helskarm.</div>
         </div>
         <button class="back-btn" id="videoGateCloseBtn" type="button">Stang</button>
       </div>
@@ -994,9 +1104,31 @@
     </div>
   </div>
 
+  <div class="startup-gate show" id="startupGate" aria-hidden="false">
+    <div class="startup-panel">
+      <h2 id="startupTitle">Valj sprak</h2>
+      <p id="startupSubtitle">Valj svenska eller engelska innan du borjar spela.</p>
+      <div class="startup-row">
+        <label for="startupLanguage" id="startupLanguageLabel">Sprak</label>
+        <select id="startupLanguage">
+          <option value="sv">Svenska</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="startup-row">
+        <input id="startupCodeInput" type="text" autocomplete="off" spellcheck="false" placeholder="Skriv kod (valfritt)">
+      </div>
+      <div class="startup-code-status" id="startupCodeStatus"></div>
+      <button class="play-btn" id="startupContinueBtn" type="button">Fortsatt</button>
+    </div>
+  </div>
+
   <script>
     const menu = document.getElementById("menu");
     const gameView = document.getElementById("gameView");
+    const menuTitle = document.getElementById("menuTitle");
+    const menuIntro = document.getElementById("menuIntro");
+    const menuSponsors = document.getElementById("menuSponsors");
     const gameTitle = document.getElementById("gameTitle");
     const gameHint = document.getElementById("gameHint");
     const backBtn = document.getElementById("backBtn");
@@ -1012,10 +1144,20 @@
     const clearCreatureBtn = document.getElementById("clearCreatureBtn");
     const randomCreatureBtn = document.getElementById("randomCreatureBtn");
     const videoGate = document.getElementById("videoGate");
+    const videoGateTitle = document.getElementById("videoGateTitle");
+    const videoGateDesc = document.getElementById("videoGateDesc");
     const videoGateFrame = document.getElementById("videoGateFrame");
     const videoGateCountdown = document.getElementById("videoGateCountdown");
     const videoGateContinueBtn = document.getElementById("videoGateContinueBtn");
     const videoGateCloseBtn = document.getElementById("videoGateCloseBtn");
+    const startupGate = document.getElementById("startupGate");
+    const startupTitle = document.getElementById("startupTitle");
+    const startupSubtitle = document.getElementById("startupSubtitle");
+    const startupLanguageLabel = document.getElementById("startupLanguageLabel");
+    const startupLanguage = document.getElementById("startupLanguage");
+    const startupCodeInput = document.getElementById("startupCodeInput");
+    const startupCodeStatus = document.getElementById("startupCodeStatus");
+    const startupContinueBtn = document.getElementById("startupContinueBtn");
     const mobileController = document.getElementById("mobileController");
     const mobileRotateLock = document.getElementById("mobileRotateLock");
     const moveStick = document.getElementById("moveStick");
@@ -1037,6 +1179,9 @@
     }
 
     const supportsMobileController = detectMobileCapability();
+    const storedLang = localStorage.getItem("arcade_lang");
+    const hasStoredLang = storedLang === "sv" || storedLang === "en";
+    const storedBypass = localStorage.getItem("arcade_fullscreen_bypass") === "1";
 
     const app = {
       mode: "menu",
@@ -1045,7 +1190,168 @@
       lastTs: 0,
       mouseX: canvas.width * 0.5,
       mouseY: canvas.height * 0.5,
-      mobileEnabled: supportsMobileController
+      mobileEnabled: supportsMobileController,
+      language: hasStoredLang && storedLang === "en" ? "en" : "sv",
+      fullscreenBypass: storedBypass
+    };
+
+    const uiText = {
+      sv: {
+        menuTitle: "Arcade Hub",
+        menuIntro: "Valj spel i retrostil och forsok sla rekord.",
+        sponsors: "Sponsorer: Emil Ljungdahl",
+        play: "Spela",
+        mobileSupport: "Mobile Support",
+        backToMenu: "Till meny",
+        fullscreenEnter: "Helskarm",
+        fullscreenExit: "Avsluta helskarm",
+        gameTitle: "Spel",
+        gateTitle: "Helskarmslas",
+        gateDesc: "Se 10 sekunder av videon for att lasa upp helskarm.",
+        gateClose: "Stang",
+        gateContinue: "Fortsatt till helskarm",
+        gateDone: "Klar! Du kan fortsatta till helskarm.",
+        startupTitle: "Valj sprak",
+        startupSubtitle: "Valj svenska eller engelska innan du borjar spela.",
+        startupLanguage: "Sprak",
+        startupCodePlaceholder: "Skriv kod (valfritt)",
+        startupContinue: "Fortsatt",
+        startupCodeOk: "Koden accepterad. Helskarms-timer ar avstangd.",
+        startupCodeBad: "Fel kod. Timern ar fortfarande aktiv.",
+        pongRestart: "Starta om",
+        pongPause: "Pausa",
+        pongResume: "Fortsatt",
+        pongMenu: "Meny"
+      },
+      en: {
+        menuTitle: "Arcade Hub",
+        menuIntro: "Pick a retro game and try to beat the high score.",
+        sponsors: "Sponsors: Emil Ljungdahl",
+        play: "Play",
+        mobileSupport: "Mobile Support",
+        backToMenu: "Back to menu",
+        fullscreenEnter: "Fullscreen",
+        fullscreenExit: "Exit fullscreen",
+        gameTitle: "Game",
+        gateTitle: "Fullscreen Lock",
+        gateDesc: "Watch 10 seconds of the video to unlock fullscreen.",
+        gateClose: "Close",
+        gateContinue: "Continue to fullscreen",
+        gateDone: "Done! You can continue to fullscreen.",
+        startupTitle: "Choose language",
+        startupSubtitle: "Choose Swedish or English before you start playing.",
+        startupLanguage: "Language",
+        startupCodePlaceholder: "Enter code (optional)",
+        startupContinue: "Continue",
+        startupCodeOk: "Code accepted. Fullscreen timer is disabled.",
+        startupCodeBad: "Wrong code. Timer is still active.",
+        pongRestart: "Restart",
+        pongPause: "Pause",
+        pongResume: "Resume",
+        pongMenu: "Menu"
+      }
+    };
+
+    const menuCardDescriptions = {
+      pong: {
+        sv: "Styr plattan med mus, touch eller mobilstick och krossa klossarna.",
+        en: "Control the paddle with mouse, touch, or mobile stick and smash the bricks."
+      },
+      dash: {
+        sv: "Hoppa over hinder i en Geometry Dash-lik bana.",
+        en: "Jump over obstacles in a Geometry Dash-inspired level."
+      },
+      platformer: {
+        sv: "2D platformer med fiender, spikes och myntjakt till flaggan.",
+        en: "2D platformer with enemies, spikes, and coin collecting to the flag."
+      },
+      creator: {
+        sv: "Bygg en Spore-inspirerad varelse med kroppsdelar.",
+        en: "Build a Spore-inspired creature with body parts."
+      },
+      snake: {
+        sv: "At pellets, vaxt och overlev sa lange som mojligt.",
+        en: "Eat pellets, grow, and survive as long as possible."
+      },
+      blaster: {
+        sv: "Skjut ner fiender innan de hinner till botten.",
+        en: "Shoot down enemies before they reach the bottom."
+      },
+      flappy: {
+        sv: "Klicka eller Space for att flyga mellan roren.",
+        en: "Click or press Space to fly through the pipes."
+      },
+      fifa: {
+        sv: "3D fotboll i FIFA-lik TV-vinkel med passningar och skott.",
+        en: "3D football in a FIFA-like TV camera with passing and shooting."
+      },
+      zombiefps: {
+        sv: "FPS med vagor, pistol, AR och granater. Singleplayer eller online med vanner.",
+        en: "Wave-based FPS with pistol, AR, and grenades. Singleplayer or online with friends."
+      },
+      creed: {
+        sv: "AC1-inspirerad jakt i oppen stad med flera vapen.",
+        en: "AC1-inspired hunt in an open city with multiple weapons."
+      },
+      spider: {
+        sv: "Svinga genom en stor stad med fysikbaserade webs.",
+        en: "Swing through a large city with physics-based webs."
+      },
+      mejmut: {
+        sv: "3D street fighter-inspirerad duell med fem valbara karaktarer.",
+        en: "3D street-fighter-inspired duel with five selectable characters."
+      }
+    };
+
+    const gameMetaEn = {
+      pong: {
+        title: "Pong Breakout",
+        hint: "Mouse/touch or arrows/A-D: move paddle. Enter/Space restarts, P pauses."
+      },
+      dash: {
+        title: "Dash Runner",
+        hint: "Space, Arrow Up, or click: jump over obstacles."
+      },
+      platformer: {
+        title: "Neon Ruins",
+        hint: "Move with arrows/A-D. Space jumps, R restarts."
+      },
+      creator: {
+        title: "Creature Lab",
+        hint: "Left click places and drags parts. Right click removes. Use panel controls."
+      },
+      snake: {
+        title: "Snake",
+        hint: "Arrows/A-D to steer. Eat fruit and avoid walls and tail."
+      },
+      blaster: {
+        title: "Space Blaster",
+        hint: "Move with arrows/A-D. Space shoots."
+      },
+      flappy: {
+        title: "Flappy Pixel",
+        hint: "Click or Space to flap."
+      },
+      fifa: {
+        title: "Pixel Football 3D",
+        hint: "WASD/Arrows move. Space shoots, E passes. Q switches defender. F changes camera."
+      },
+      zombiefps: {
+        title: "Zombie Siege FPS",
+        hint: "WASD move, mouse look/aim. Click shoots. 1/2 switch weapon. G grenade."
+      },
+      creed: {
+        title: "Desert Creed 3D",
+        hint: "3rd person: mouse controls camera, WASD moves. Hold Space/A at walls to climb. Stay hidden."
+      },
+      spider: {
+        title: "Spider Swing 3D",
+        hint: "Mouse controls camera. Hold F or left mouse for web pull. Space jumps."
+      },
+      mejmut: {
+        title: "Mej-mut Fighting",
+        hint: "A/D or arrows move. F punch, G kick, H special, Space jump, Q block."
+      }
     };
 
     const fullscreenGate = {
@@ -1053,6 +1359,124 @@
       intervalId: null,
       resolver: null
     };
+
+    function currentText() {
+      return uiText[app.language] || uiText.sv;
+    }
+
+    function gateWaitText(seconds) {
+      return app.language === "en" ? `Wait ${seconds} seconds...` : `Vanta ${seconds} sekunder...`;
+    }
+
+    function getLocalizedGameMeta(key, game) {
+      if (app.language === "en" && gameMetaEn[key]) return gameMetaEn[key];
+      return { title: game.title, hint: game.hint };
+    }
+
+    function localizeMobileProfileLabels() {
+      const en = app.language === "en";
+      mobileControlProfiles.default.buttons.a.label = en ? "Jump" : "Hoppa";
+      mobileControlProfiles.default.buttons.b.label = en ? "Action" : "Action";
+      mobileControlProfiles.default.buttons.x.label = "Q";
+      mobileControlProfiles.default.buttons.y.label = "E";
+      mobileControlProfiles.default.buttons.fire.label = "Fire";
+      mobileControlProfiles.default.buttons.start.label = "Start";
+
+      mobileControlProfiles.pong.buttons.a.label = en ? "Start" : "Starta";
+      mobileControlProfiles.pong.buttons.b.label = en ? "Pause" : "Pausa";
+      mobileControlProfiles.pong.buttons.x.label = en ? "Menu" : "Meny";
+      mobileControlProfiles.pong.buttons.y.label = en ? "Fullscreen" : "Fullscreen";
+
+      mobileControlProfiles.dash.buttons.a.label = en ? "Jump" : "Hoppa";
+      mobileControlProfiles.platformer.buttons.a.label = en ? "Jump" : "Hoppa";
+      mobileControlProfiles.platformer.buttons.b.label = en ? "Reset" : "Reset";
+      mobileControlProfiles.platformer.buttons.start.label = "Start";
+      mobileControlProfiles.creator.buttons.a.label = en ? "Place" : "Placera";
+      mobileControlProfiles.snake.buttons.a.label = "Start";
+      mobileControlProfiles.blaster.buttons.a.label = en ? "Shoot" : "Skjut";
+      mobileControlProfiles.blaster.buttons.start.label = "Start";
+      mobileControlProfiles.flappy.buttons.a.label = "Flap";
+      mobileControlProfiles.fifa.buttons.a.label = en ? "Shoot" : "Skott";
+      mobileControlProfiles.fifa.buttons.b.label = en ? "Pass" : "Pass";
+      mobileControlProfiles.fifa.buttons.x.label = en ? "Switch" : "Byt";
+      mobileControlProfiles.fifa.buttons.y.label = en ? "Sprint" : "Sprint";
+      mobileControlProfiles.fifa.buttons.fire.label = en ? "Camera" : "Kamera";
+      mobileControlProfiles.fifa.buttons.start.label = "Start";
+      mobileControlProfiles.zombiefps.buttons.a.label = "Fire";
+      mobileControlProfiles.zombiefps.buttons.b.label = en ? "Grenade" : "Granat";
+      mobileControlProfiles.zombiefps.buttons.x.label = en ? "Weapon1" : "Vapen1";
+      mobileControlProfiles.zombiefps.buttons.y.label = en ? "Weapon2" : "Vapen2";
+      mobileControlProfiles.zombiefps.buttons.fire.label = en ? "Sprint" : "Sprint";
+      mobileControlProfiles.zombiefps.buttons.start.label = "Start";
+      mobileControlProfiles.creed.buttons.a.label = en ? "Attack" : "Attack";
+      mobileControlProfiles.creed.buttons.b.label = en ? "Jump" : "Hoppa";
+      mobileControlProfiles.creed.buttons.x.label = en ? "Knife" : "Kniv";
+      mobileControlProfiles.creed.buttons.y.label = en ? "Sprint" : "Sprint";
+      mobileControlProfiles.creed.buttons.fire.label = en ? "Shoot" : "Skott";
+      mobileControlProfiles.creed.buttons.start.label = "Start";
+      mobileControlProfiles.spider.buttons.a.label = "Web";
+      mobileControlProfiles.spider.buttons.b.label = en ? "Jump" : "Hoppa";
+      mobileControlProfiles.spider.buttons.x.label = "Web MB1";
+      mobileControlProfiles.spider.buttons.y.label = en ? "Sprint" : "Sprint";
+      mobileControlProfiles.spider.buttons.start.label = "Start";
+      mobileControlProfiles.mejmut.buttons.a.label = "Punch";
+      mobileControlProfiles.mejmut.buttons.b.label = "Kick";
+      mobileControlProfiles.mejmut.buttons.x.label = "Special";
+      mobileControlProfiles.mejmut.buttons.y.label = "Block";
+      mobileControlProfiles.mejmut.buttons.fire.label = en ? "Jump" : "Jump";
+      mobileControlProfiles.mejmut.buttons.start.label = "Start";
+    }
+
+    function applyLanguage(lang) {
+      app.language = lang === "en" ? "en" : "sv";
+      localStorage.setItem("arcade_lang", app.language);
+      document.documentElement.lang = app.language;
+      const t = currentText();
+      menuTitle.textContent = t.menuTitle;
+      menuIntro.textContent = t.menuIntro;
+      menuSponsors.textContent = t.sponsors;
+      backBtn.textContent = t.backToMenu;
+      videoGateTitle.textContent = t.gateTitle;
+      videoGateDesc.textContent = t.gateDesc;
+      videoGateCloseBtn.textContent = t.gateClose;
+      videoGateContinueBtn.textContent = t.gateContinue;
+      if (!videoGate.classList.contains("show")) {
+        videoGateCountdown.textContent = gateWaitText(10);
+      }
+      startupTitle.textContent = t.startupTitle;
+      startupSubtitle.textContent = t.startupSubtitle;
+      startupLanguageLabel.textContent = t.startupLanguage;
+      startupCodeInput.placeholder = t.startupCodePlaceholder;
+      startupContinueBtn.textContent = t.startupContinue;
+
+      const mobileNote = document.querySelector(".mobile-note");
+      if (mobileNote) mobileNote.textContent = t.mobileSupport;
+
+      document.querySelectorAll("button[data-game]").forEach((button) => {
+        const key = button.dataset.game;
+        button.textContent = t.play;
+        const card = button.closest(".card");
+        const desc = card ? card.querySelector("p") : null;
+        const item = menuCardDescriptions[key];
+        if (desc && item) desc.textContent = app.language === "en" ? item.en : item.sv;
+      });
+
+      if (typeof mobileControlProfiles !== "undefined") {
+        localizeMobileProfileLabels();
+        if (app.mode === "game") configureMobileControllerForGame(app.currentKey);
+      }
+
+      if (app.mode === "game" && app.currentGame && app.currentKey) {
+        const meta = getLocalizedGameMeta(app.currentKey, app.currentGame);
+        gameTitle.textContent = meta.title;
+        gameHint.textContent = meta.hint;
+      } else if (app.mode === "menu") {
+        gameTitle.textContent = t.gameTitle;
+        gameHint.textContent = "";
+      }
+      updatePongLayout();
+      updateFullscreenButtons();
+    }
 
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
@@ -1149,10 +1573,11 @@
     }
 
     function openFullscreenGate() {
+      if (app.fullscreenBypass) return Promise.resolve(true);
       return new Promise((resolve) => {
         fullscreenGate.resolver = resolve;
         fullscreenGate.timer = 10;
-        videoGateCountdown.textContent = "Vanta 10 sekunder...";
+        videoGateCountdown.textContent = gateWaitText(10);
         videoGateContinueBtn.disabled = true;
         const videoId = pickFullscreenVideoId();
         videoGateFrame.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
@@ -1164,11 +1589,11 @@
         fullscreenGate.intervalId = setInterval(() => {
           fullscreenGate.timer -= 1;
           if (fullscreenGate.timer > 0) {
-            videoGateCountdown.textContent = `Vanta ${fullscreenGate.timer} sekunder...`;
+            videoGateCountdown.textContent = gateWaitText(fullscreenGate.timer);
             return;
           }
           clearFullscreenGateTimer();
-          videoGateCountdown.textContent = "Klar! Du kan fortsatta till helskarm.";
+          videoGateCountdown.textContent = currentText().gateDone;
           videoGateContinueBtn.disabled = false;
         }, 1000);
       });
@@ -1189,10 +1614,13 @@
         }
       },
       pong: {
-        move: false,
+        move: true,
         look: false,
         buttons: {
-          a: { label: "Starta", type: "click" }
+          a: { label: "Starta", type: "key", code: "Enter" },
+          b: { label: "Pausa", type: "key", code: "KeyP" },
+          x: { label: "Meny", type: "menu" },
+          y: { label: "Fullscreen", type: "fullscreen" }
         }
       },
       dash: {
@@ -1551,6 +1979,14 @@
       }
       if (spec.type === "click") {
         emitGameClick();
+        return;
+      }
+      if (spec.type === "fullscreen") {
+        toggleFullscreen();
+        return;
+      }
+      if (spec.type === "menu") {
+        if (app.mode === "game") backToMenu();
       }
     }
 
@@ -1729,17 +2165,20 @@
 
     const pong = {
       title: "Pong Breakout",
-      hint: "Mus: flytta plattan. Sida: starta om, pausa, meny.",
+      hint: "Mus/touch eller pilar/A-D: flytta plattan. Enter/Space startar om, P pausar.",
       highScore: 0,
       paddle: { w: 82, h: 8, x: 0, y: 0 },
       ball: { x: 0, y: 0, r: 5, vx: 0, vy: 0 },
       brickField: { rows: 4, cols: 8, w: 50, h: 11, gap: 5, top: 22 },
       bricks: [],
       score: 0,
+      moveDir: 0,
+      moveSpeed: 5.8,
       running: true,
       paused: false,
       init() {
         this.score = 0;
+        this.moveDir = 0;
         this.running = true;
         this.paused = false;
         this.paddle.x = canvas.width / 2 - this.paddle.w / 2;
@@ -1779,6 +2218,21 @@
         if (this.paused) return;
         if (!this.running) this.init();
       },
+      onKeyDown(code, repeat = false) {
+        if (code === "ArrowLeft" || code === "KeyA") this.moveDir = -1;
+        if (code === "ArrowRight" || code === "KeyD") this.moveDir = 1;
+        if (!repeat && code === "KeyP") {
+          this.togglePause();
+          updatePongLayout();
+        }
+        if (!repeat && (code === "Enter" || code === "Space")) {
+          if (!this.running) this.init();
+        }
+      },
+      onKeyUp(code) {
+        if ((code === "ArrowLeft" || code === "KeyA") && this.moveDir < 0) this.moveDir = 0;
+        if ((code === "ArrowRight" || code === "KeyD") && this.moveDir > 0) this.moveDir = 0;
+      },
       togglePause() {
         if (!this.running) return;
         this.paused = !this.paused;
@@ -1796,8 +2250,44 @@
         else this.ball.vy *= -1;
         return true;
       },
+      drawPaddleArc() {
+        const p = this.paddle;
+        const x = Math.round(p.x);
+        const y = Math.round(p.y);
+        const w = p.w;
+        const h = p.h;
+        const rise = Math.max(7, Math.round(h * 2.2));
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, y + h);
+        ctx.quadraticCurveTo(x + w * 0.5, y - rise, x + w, y + h);
+        ctx.lineTo(x + w - 2, y + h + 3);
+        ctx.lineTo(x + 2, y + h + 3);
+        ctx.closePath();
+        const grad = ctx.createLinearGradient(x, y - rise, x, y + h + 3);
+        grad.addColorStop(0, "#f9fcff");
+        grad.addColorStop(0.48, "#d8e6fb");
+        grad.addColorStop(1, "#8ea6cd");
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(8,20,42,0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.12, y + h - 1);
+        ctx.quadraticCurveTo(x + w * 0.5, y - rise + 5, x + w * 0.88, y + h - 1);
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.restore();
+      },
       update(dtScale) {
         if (!this.running || this.paused) return;
+        if (this.moveDir !== 0) {
+          this.paddle.x = clamp(this.paddle.x + this.moveDir * this.moveSpeed * dtScale, 0, canvas.width - this.paddle.w);
+        }
 
         this.ball.x += this.ball.vx * dtScale;
         this.ball.y += this.ball.vy * dtScale;
@@ -1852,8 +2342,7 @@
           ctx.fillRect(Math.round(brick.x), Math.round(brick.y), brick.w, 2);
         }
 
-        ctx.fillStyle = "#e8f1ff";
-        ctx.fillRect(Math.round(this.paddle.x), Math.round(this.paddle.y), this.paddle.w, this.paddle.h);
+        this.drawPaddleArc();
 
         ctx.fillStyle = "#ffbf46";
         ctx.fillRect(Math.round(this.ball.x - this.ball.r), Math.round(this.ball.y - this.ball.r), this.ball.r * 2, this.ball.r * 2);
@@ -4540,7 +5029,7 @@
 
     const creed = {
       title: "Desert Creed 3D",
-      hint: "3rd person: mus styr kameran (upp/ner/sida), WASD ror dig. Hall Space eller A mot vagg for att klattra.",
+      hint: "3rd person: mus styr kameran, WASD ror dig. Hall Space/A mot vagg for smidigare klattring. Hall dig dold: vakter far ! och attackerar i alert.",
       running: true,
       missionComplete: false,
       player: { x: 0, y: 0, z: 0, yaw: 0, speed: 0.2, vy: 0, radius: 0.62, onGround: true },
@@ -4575,6 +5064,14 @@
       attackCooldown: 0,
       killCount: 0,
       totalTargets: 0,
+      stealthState: "HIDDEN",
+      stealthChain: 0,
+      stealthPeak: 0,
+      alertCount: 0,
+      playerMaxHealth: 100,
+      playerHealth: 100,
+      playerDown: false,
+      damageFlash: 0,
       worldSize: 74,
       crosshairXRatio: 0.62,
       crosshairYRatio: 0.58,
@@ -4608,6 +5105,13 @@
         this.knifeAmmo = 16;
         this.attackCooldown = 0;
         this.killCount = 0;
+        this.stealthState = "HIDDEN";
+        this.stealthChain = 0;
+        this.stealthPeak = 0;
+        this.alertCount = 0;
+        this.playerHealth = this.playerMaxHealth;
+        this.playerDown = false;
+        this.damageFlash = 0;
         this.projectiles = [];
         this.jumpQueued = false;
         this.nearVault = false;
@@ -4691,7 +5195,15 @@
           homeX: point[0],
           homeZ: point[1],
           phase: i * 0.7,
-          alive: true
+          alive: true,
+          facing: this.seeded(i + 200) * Math.PI * 2,
+          alertness: 0,
+          alertedTimer: 0,
+          patrolRadius: 1.4 + this.seeded(i + 300) * 1.8,
+          movePhase: i * 0.9,
+          moveBlend: 0,
+          attackCooldown: 22 + this.seeded(i + 400) * 24,
+          attackAnim: 0
         }));
         this.totalTargets = this.targets.length;
       },
@@ -4734,7 +5246,7 @@
         const edge = (i) => now[i] && !prev[i];
 
         if (edge(0)) {
-          if (this.missionComplete) this.init();
+          if (this.missionComplete || this.playerDown) this.init();
           else this.jumpQueued = true;
         }
         if (edge(4)) this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
@@ -4763,10 +5275,10 @@
         if (code === "KeyH") this.throwKnife();
         if (code === "Space") {
           this.keys.climb = true;
-          if (this.missionComplete) this.init();
+          if (this.missionComplete || this.playerDown) this.init();
           else this.jumpQueued = true;
         }
-        if (code === "Enter" && this.missionComplete) this.init();
+        if (code === "Enter" && (this.missionComplete || this.playerDown)) this.init();
       },
       onKeyUp(code) {
         if (code === "KeyW" || code === "ArrowUp") this.keys.forward = false;
@@ -4779,7 +5291,7 @@
         if (code === "Space") this.keys.climb = false;
       },
       onClick() {
-        if (this.missionComplete) {
+        if (this.missionComplete || this.playerDown) {
           this.init();
           return;
         }
@@ -4792,22 +5304,131 @@
         this.camera.yaw = normalizeAngle(this.camera.yaw + dx * sens);
         this.camera.pitch = clamp(this.camera.pitch - dy * sens, -0.95, 0.55);
       },
-      updateTargets() {
+      isPointInsideObstacle(x, z, y) {
+        for (const b of this.buildings) {
+          const hx = b.w * 0.5 + 0.05;
+          const hz = b.d * 0.5 + 0.05;
+          if (y < b.h - 0.04 && x > b.x - hx && x < b.x + hx && z > b.z - hz && z < b.z + hz) return true;
+        }
+        for (const p of this.parkourBlocks) {
+          const hx = p.w * 0.5 + 0.05;
+          const hz = p.d * 0.5 + 0.05;
+          if (y < p.h - 0.04 && x > p.x - hx && x < p.x + hx && z > p.z - hz && z < p.z + hz) return true;
+        }
+        return false;
+      },
+      isSightBlocked(ax, az, bx, bz, y = 1.25) {
+        const dist = Math.hypot(bx - ax, bz - az);
+        const steps = Math.max(3, Math.ceil(dist / 1.2));
+        for (let i = 1; i < steps; i += 1) {
+          const t = i / steps;
+          const x = ax + (bx - ax) * t;
+          const z = az + (bz - az) * t;
+          if (this.isPointInsideObstacle(x, z, y)) return true;
+        }
+        return false;
+      },
+      updateTargets(dtScale = 1) {
         const t = performance.now() * 0.001;
+        const moveSignal = this.anim.moveBlend + (this.keys.sprint || this.padState.sprint ? 0.65 : 0) + (this.anim.climbBlend > 0.2 ? 0.35 : 0);
+        let maxAlertness = 0;
+        let alertedNow = 0;
+
         for (const target of this.targets) {
           if (!target.alive) continue;
-          target.x = target.homeX + Math.cos(t * 0.75 + target.phase) * 2.2;
-          target.z = target.homeZ + Math.sin(t * 0.75 + target.phase) * 2.2;
+          target.attackCooldown = Math.max(0, target.attackCooldown - dtScale);
+          target.attackAnim = Math.max(0, target.attackAnim - 0.08 * dtScale);
+          const prevX = target.x;
+          const prevZ = target.z;
+
+          const dx = this.player.x - target.x;
+          const dz = this.player.z - target.z;
+          const dist = Math.hypot(dx, dz);
+          const toPlayerYaw = Math.atan2(dx, dz);
+          const facingDiff = Math.abs(normalizeAngle(toPlayerYaw - target.facing));
+          const visionRange = 8 + moveSignal * 5.5 + (target.alertedTimer > 0 ? 7 : 0);
+          const fov = target.alertedTimer > 0 ? 1.6 : 0.9;
+          const canSee = dist < visionRange && facingDiff < fov && !this.isSightBlocked(target.x, target.z, this.player.x, this.player.z, this.player.y + 1.2);
+          const noisyNear = dist < 4.8 + moveSignal * 3.3;
+
+          if (canSee) {
+            target.alertness += (0.018 + Math.max(0, visionRange - dist) * 0.0052) * dtScale;
+          } else if (noisyNear) {
+            target.alertness += (0.006 + moveSignal * 0.011) * dtScale;
+          } else {
+            target.alertness -= 0.014 * dtScale;
+          }
+          target.alertness = clamp(target.alertness, 0, 1);
+
+          if (target.alertness >= 0.95) target.alertedTimer = Math.max(target.alertedTimer, 300);
+          if (target.alertedTimer > 0) {
+            target.alertedTimer = Math.max(0, target.alertedTimer - dtScale);
+            alertedNow += 1;
+            if (dist > 1.35) {
+              const chaseSpeed = 0.055 * dtScale;
+              target.x += (dx / dist) * chaseSpeed;
+              target.z += (dz / dist) * chaseSpeed;
+            } else {
+              const orbit = (target.phase % 2 === 0 ? 1 : -1) * 0.03 * dtScale;
+              target.x += Math.cos(toPlayerYaw + Math.PI * 0.5) * orbit;
+              target.z += Math.sin(toPlayerYaw + Math.PI * 0.5) * orbit;
+            }
+            target.facing = toPlayerYaw;
+            const closeRange = dist < 2.05 && !this.isSightBlocked(target.x, target.z, this.player.x, this.player.z, this.player.y + 1.1);
+            if (closeRange && target.attackCooldown <= 0 && !this.playerDown) {
+              const dmg = 5 + Math.round(target.alertness * 4);
+              this.playerHealth = Math.max(0, this.playerHealth - dmg);
+              this.damageFlash = 1;
+              target.attackCooldown = 28 + Math.random() * 20;
+              target.attackAnim = 1;
+              if (dist > 0.001) {
+                const push = (2.15 - Math.min(2.15, dist)) * 0.28;
+                const nx = clamp(this.player.x + (dx / dist) * push, -this.worldSize, this.worldSize);
+                const nz = clamp(this.player.z + (dz / dist) * push, -this.worldSize, this.worldSize);
+                if (!this.collidesAt(nx, nz, this.player.y + 0.2)) {
+                  this.player.x = nx;
+                  this.player.z = nz;
+                }
+              }
+              if (this.playerHealth <= 0) {
+                this.playerHealth = 0;
+                this.playerDown = true;
+              }
+            }
+          } else {
+            const patrolX = target.homeX + Math.cos(t * 0.75 + target.phase) * target.patrolRadius;
+            const patrolZ = target.homeZ + Math.sin(t * 0.75 + target.phase) * target.patrolRadius;
+            target.x += (patrolX - target.x) * 0.09 * dtScale;
+            target.z += (patrolZ - target.z) * 0.09 * dtScale;
+            target.facing = normalizeAngle(target.facing + Math.sin(t * 0.65 + target.phase) * 0.018 * dtScale);
+          }
+
+          target.x = clamp(target.x, -this.worldSize + 2, this.worldSize - 2);
+          target.z = clamp(target.z, -this.worldSize + 2, this.worldSize - 2);
+          const moveDist = Math.hypot(target.x - prevX, target.z - prevZ);
+          target.moveBlend = moveDist > 0.0009
+            ? Math.min(1, target.moveBlend + 0.12 * dtScale)
+            : Math.max(0, target.moveBlend - 0.08 * dtScale);
+          target.movePhase += (0.2 + moveDist * 13) * dtScale;
+          maxAlertness = Math.max(maxAlertness, target.alertness);
         }
+
+        this.alertCount = alertedNow;
+        this.stealthPeak = Math.max(this.stealthPeak, maxAlertness);
+        if (alertedNow > 0) this.stealthState = "ALERT";
+        else if (maxAlertness > 0.35) this.stealthState = "SUSPICIOUS";
+        else this.stealthState = "HIDDEN";
       },
       killTarget(target) {
         if (!target || !target.alive) return;
+        const silentKill = target.alertedTimer <= 0 && target.alertness < 0.35;
+        this.stealthChain = silentKill ? this.stealthChain + 1 : 0;
         target.alive = false;
         this.killCount += 1;
         if (this.killCount >= this.totalTargets) this.missionComplete = true;
       },
       attack() {
-        if (this.attackCooldown > 0 || !this.running) return;
+        if (this.attackCooldown > 0 || !this.running || this.playerDown || this.missionComplete) return;
         this.player.yaw = this.camera.yaw;
         if (this.weaponIndex === 2) {
           this.throwKnife();
@@ -4838,7 +5459,7 @@
         this.attackCooldown = this.weaponIndex === 0 ? 12 : 18;
       },
       throwKnife() {
-        if (!this.running || this.knifeAmmo <= 0 || this.attackCooldown > 0) return;
+        if (!this.running || this.playerDown || this.missionComplete || this.knifeAmmo <= 0 || this.attackCooldown > 0) return;
         this.player.yaw = this.camera.yaw;
         this.knifeAmmo -= 1;
         this.attackCooldown = 10;
@@ -4972,6 +5593,28 @@
         this.player.vy = 0;
         return true;
       },
+      tryClimbLedge() {
+        const fx = Math.sin(this.camera.yaw);
+        const fz = Math.cos(this.camera.yaw);
+        const probeDist = this.player.radius + 0.45;
+        const probeX = this.player.x + fx * probeDist;
+        const probeZ = this.player.z + fz * probeDist;
+        const topY = this.surfaceHeightAt(probeX, probeZ, this.player.y + 3.1);
+        const climbHeight = topY - this.player.y;
+        if (climbHeight < 0.65 || climbHeight > 2.6) return false;
+
+        const landX = clamp(probeX + fx * 0.7, -this.worldSize, this.worldSize);
+        const landZ = clamp(probeZ + fz * 0.7, -this.worldSize, this.worldSize);
+        if (this.collidesAt(landX, landZ, topY + 0.75)) return false;
+
+        this.anim.vault = true;
+        this.anim.vaultT = 0;
+        this.anim.vaultDur = 14;
+        this.anim.vaultFrom = { x: this.player.x, y: this.player.y, z: this.player.z };
+        this.anim.vaultTo = { x: landX, y: Math.max(0, topY + 0.04), z: landZ };
+        this.player.vy = 0;
+        return true;
+      },
       movePlayer(dtScale) {
         const turnAxis = (this.keys.turnRight ? 1 : 0) - (this.keys.turnLeft ? 1 : 0) + this.padState.turn;
         this.camera.yaw = normalizeAngle(this.camera.yaw + turnAxis * 0.05 * dtScale);
@@ -5024,7 +5667,7 @@
         this.player.y = Math.max(0, this.anim.vaultFrom.y + (this.anim.vaultTo.y - this.anim.vaultFrom.y) * s + arc);
         if (t >= 1) {
           this.anim.vault = false;
-          this.player.y = Math.max(0, this.anim.vaultTo.y * 0.15);
+          this.player.y = Math.max(0, this.anim.vaultTo.y);
         }
         this.anim.climbBlend = Math.max(0, this.anim.climbBlend - 0.15 * dtScale);
         this.anim.wallContact = false;
@@ -5034,17 +5677,22 @@
         if (this.anim.vault) return;
         const prevY = this.player.y;
 
-        const climbHeld = this.keys.climb || this.keys.left || this.padState.climbHold;
+        const climbHeld = this.keys.climb || this.padState.climbHold;
+        const climbInput = ((this.keys.forward ? 1 : 0) - (this.keys.back ? 1 : 0)) - this.padState.moveY;
         const climbing = climbHeld && this.anim.wallContact;
         if (climbing) {
-          this.player.vy = Math.max(this.player.vy, 0.12);
+          const upIntent = Math.max(0, climbInput);
+          const downIntent = Math.max(0, -climbInput);
+          const climbBoost = 0.018 + upIntent * 0.048 - downIntent * 0.045;
+          this.player.vy = clamp(this.player.vy + climbBoost * dtScale, -0.16, 0.34);
+          if (upIntent > 0.25 && this.tryClimbLedge()) return;
           this.anim.climbBlend = Math.min(1, this.anim.climbBlend + 0.11 * dtScale);
-          this.anim.movePhase += 0.34 * dtScale;
+          this.anim.movePhase += (0.24 + upIntent * 0.5 + downIntent * 0.18) * dtScale;
         } else {
           this.anim.climbBlend = Math.max(0, this.anim.climbBlend - 0.1 * dtScale);
         }
 
-        this.player.vy -= (climbing ? 0.0045 : 0.014) * dtScale;
+        this.player.vy -= (climbing ? 0.0026 : 0.014) * dtScale;
         this.player.y += this.player.vy * dtScale;
 
         const maxSurfaceStep = Math.max(prevY, this.player.y) + 0.9;
@@ -5264,6 +5912,78 @@
           addPart(handX, handY, handZ + 0.16, 0.05, 0.32, 0.05, "#f2f2f2", "#d8d8d8", "#ffffff");
         }
       },
+      pushGuardModel(list, target) {
+        const yaw = target.facing;
+        const cy = Math.cos(yaw);
+        const sy = Math.sin(yaw);
+        const alertMix = target.alertedTimer > 0 ? 1 : target.alertness;
+        const move = Math.sin(target.movePhase) * 0.34 * target.moveBlend;
+        const moveOpp = Math.sin(target.movePhase + Math.PI) * 0.34 * target.moveBlend;
+        const attack = Math.sin((1 - target.attackAnim) * Math.PI) * 0.76;
+        const armL = -move * 0.95 + attack * 0.22;
+        const armR = move * 0.95 - attack * 0.86;
+        const legL = move * 0.9;
+        const legR = moveOpp * 0.9;
+        const bodyY = target.y + 0.84;
+        const tunic1 = alertMix > 0.7 ? "#9a3838" : (alertMix > 0.35 ? "#8f6a36" : "#6a6f7a");
+        const tunic2 = alertMix > 0.7 ? "#7f2626" : (alertMix > 0.35 ? "#77582e" : "#4f5562");
+        const trim = alertMix > 0.7 ? "#e8adad" : (alertMix > 0.35 ? "#f3d59a" : "#dce3ef");
+        const addPart = (lx, y, lz, w, d, h, c1, c2, c3) => {
+          const wx = target.x + lx * cy + lz * sy;
+          const wz = target.z - lx * sy + lz * cy;
+          this.pushOrientedBoxFaces(list, { x: wx, y, z: wz, w, d, h, yaw, c1, c2, c3 });
+        };
+
+        addPart(0, bodyY + 0.03, 0, 0.74, 0.42, 0.62, tunic1, tunic2, trim);
+        addPart(0, bodyY + 0.68, 0, 0.64, 0.36, 0.58, trim, "#c5cedc", "#f0f5ff");
+        addPart(0, bodyY + 1.08, 0, 0.48, 0.4, 0.33, "#f0d7be", "#d6bca3", "#f6e1ce");
+        addPart(0, bodyY + 1.3, -0.05, 0.52, 0.5, 0.2, "#2e333f", "#202531", "#3c4352");
+        addPart(0, bodyY + 0.27, 0, 0.78, 0.16, 0.11, "#4c3d2a", "#3d301f", "#5d4932");
+
+        addPart(-0.24, target.y + 0.78 + Math.max(0, legL * 0.28), legL * 0.22, 0.22, 0.22, 0.58, "#5f4a34", "#4c3b2a", "#6d563d");
+        addPart(-0.24, target.y + 0.24 + Math.max(0, -legL * 0.12), legL * 0.32, 0.2, 0.2, 0.55, "#4b3b2c", "#3c2f22", "#5d4936");
+        addPart(-0.24, target.y + 0.02, legL * 0.42 + 0.07, 0.25, 0.34, 0.13, "#1f1f24", "#17171a", "#2a2a31");
+
+        addPart(0.24, target.y + 0.78 + Math.max(0, legR * 0.28), legR * 0.22, 0.22, 0.22, 0.58, "#5f4a34", "#4c3b2a", "#6d563d");
+        addPart(0.24, target.y + 0.24 + Math.max(0, -legR * 0.12), legR * 0.32, 0.2, 0.2, 0.55, "#4b3b2c", "#3c2f22", "#5d4936");
+        addPart(0.24, target.y + 0.02, legR * 0.42 + 0.07, 0.25, 0.34, 0.13, "#1f1f24", "#17171a", "#2a2a31");
+
+        addPart(-0.48, bodyY + 0.7 + Math.max(0, armL * 0.28), armL * 0.32, 0.18, 0.18, 0.54, "#e9dfd1", "#d0c2b1", "#f4ecdf");
+        addPart(-0.56, bodyY + 0.24 + Math.max(0, -armL * 0.15), armL * 0.42, 0.16, 0.16, 0.52, "#d8cbbb", "#bdae98", "#e6dccf");
+        addPart(-0.56, bodyY + 0.12, armL * 0.48, 0.18, 0.18, 0.12, "#614b34", "#4e3c2a", "#715741");
+
+        addPart(0.48, bodyY + 0.7 + Math.max(0, armR * 0.28), armR * 0.32, 0.18, 0.18, 0.54, "#e9dfd1", "#d0c2b1", "#f4ecdf");
+        addPart(0.56, bodyY + 0.24 + Math.max(0, -armR * 0.15), armR * 0.42, 0.16, 0.16, 0.52, "#d8cbbb", "#bdae98", "#e6dccf");
+        addPart(0.56, bodyY + 0.12, armR * 0.52, 0.18, 0.18, 0.12, "#614b34", "#4e3c2a", "#715741");
+
+        addPart(0, bodyY + 0.58, -0.2, 0.7, 0.2, 0.95, tunic1, tunic2, trim);
+        addPart(0.62, bodyY + 0.18, 0.58 + armR * 0.2, 0.08, 0.58, 0.08, "#b7bec9", "#8b97a6", "#dce3ef");
+      },
+      drawTargetAlerts() {
+        const now = performance.now() * 0.0095;
+        for (const target of this.targets) {
+          if (!target.alive) continue;
+          const intensity = target.alertedTimer > 0 ? 1 : target.alertness;
+          if (intensity < 0.35) continue;
+          const cam = this.toCamera(target.x, target.y + 3.9, target.z);
+          const p = this.project(cam);
+          if (!p) continue;
+          const pulse = Math.sin(now + target.phase * 4.3);
+          const size = 14 + intensity * 10 + pulse * 1.5;
+          const y = p.y - 8 + pulse * 1.8;
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = `bold ${Math.max(12, Math.round(size))}px monospace`;
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = "rgba(30,14,8,0.82)";
+          ctx.fillStyle = target.alertedTimer > 0 ? "#ff5d73" : "#ffbf46";
+          ctx.globalAlpha = 0.78 + intensity * 0.22;
+          ctx.strokeText("!", p.x, y);
+          ctx.fillText("!", p.x, y);
+          ctx.restore();
+        }
+      },
       drawGroundGrid() {
         ctx.strokeStyle = "#8f7b56";
         ctx.lineWidth = 1;
@@ -5300,13 +6020,19 @@
         const alive = this.targets.filter((t) => t.alive).length;
         drawLabel(`WEAPON ${this.weapons[this.weaponIndex].toUpperCase()}`, 10, 14);
         drawLabel(`TARGETS ${alive}/${this.totalTargets}`, 10, 27);
-        drawLabel(`KNIVES ${this.knifeAmmo}`, 10, 40);
-        drawLabel(`PAD ${this.padState.connected ? "ON" : "OFF"}`, 10, 53, this.padState.connected ? "#9df0b8" : "#f0f4ff");
+        const hpColor = this.playerHealth > 45 ? "#9df0b8" : (this.playerHealth > 20 ? "#ffbf46" : "#ff5d73");
+        drawLabel(`HP ${Math.floor(Math.max(0, this.playerHealth))}/${this.playerMaxHealth}`, 10, 40, hpColor);
+        drawLabel(`KNIVES ${this.knifeAmmo}`, 10, 53);
+        drawLabel(`PAD ${this.padState.connected ? "ON" : "OFF"}`, 10, 66, this.padState.connected ? "#9df0b8" : "#f0f4ff");
+        const stealthColor = this.stealthState === "ALERT" ? "#ff5d73" : (this.stealthState === "SUSPICIOUS" ? "#ffbf46" : "#9df0b8");
+        drawLabel(`STEALTH ${this.stealthState}`, 10, 79, stealthColor);
+        if (this.alertCount > 0) drawLabel(`ALERTED ${this.alertCount}`, 10, 92, "#ff5d73");
+        if (this.stealthChain > 1) drawLabel(`STEALTH CHAIN x${this.stealthChain}`, 10, 105, "#9df0b8");
         if (this.anim.wallContact && !this.anim.vault && !this.missionComplete) {
-          drawLabel("HALL SPACE/A MOT VAGG FOR KLATTRA", 34, 236, "#ffbf46");
+          drawLabel("HALL SPACE/A MOT VAGG FOR KLATTRA", 34, 222, "#ffbf46");
         }
         if (this.nearVault && !this.anim.vault && this.player.y <= 0.05) {
-          drawLabel("SPACE/A: PARKOUR OVER HINDER", 88, 250, "#ffbf46");
+          drawLabel("SPACE/A: PARKOUR OVER HINDER", 88, 236, "#ffbf46");
         }
 
         ctx.strokeStyle = "#f0f4ff";
@@ -5322,6 +6048,13 @@
         ctx.stroke();
         ctx.globalAlpha = 1;
 
+        if (this.playerDown) {
+          ctx.fillStyle = "rgba(0,0,0,0.64)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          drawLabel("YOU WERE TAKEN DOWN", 94, 124, "#ff5d73");
+          drawLabel("PRESS SPACE/ENTER OR A", 56, 146, "#f0f4ff");
+          return;
+        }
         if (this.missionComplete) {
           ctx.fillStyle = "rgba(0,0,0,0.62)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -5334,7 +6067,12 @@
         this.player.yaw = this.camera.yaw;
         this.attackCooldown = Math.max(0, this.attackCooldown - dtScale);
         this.anim.attack = Math.max(0, this.anim.attack - 0.065 * dtScale);
+        this.damageFlash = Math.max(0, this.damageFlash - 0.045 * dtScale);
         if (this.missionComplete) {
+          this.updateCamera();
+          return;
+        }
+        if (this.playerDown) {
           this.updateCamera();
           return;
         }
@@ -5356,7 +6094,7 @@
         const inVault = this.updateVault(dtScale);
         if (!inVault) this.movePlayer(dtScale);
         this.updateVertical(dtScale);
-        this.updateTargets();
+        this.updateTargets(dtScale);
         this.updateProjectiles(dtScale);
         this.player.yaw = this.camera.yaw;
         this.updateCamera();
@@ -5382,8 +6120,7 @@
         }
         for (const target of this.targets) {
           if (!target.alive) continue;
-          this.pushBoxFaces(drawList, { x: target.x, y: 0, z: target.z, w: 1.1, d: 1.1, h: 3, c1: "#f2f2f2", c2: "#dadada", c3: "#f7f7f7" });
-          this.pushBoxFaces(drawList, { x: target.x, y: 3, z: target.z, w: 0.7, d: 0.7, h: 0.7, c1: "#5c1d1d", c2: "#7a2c2c", c3: "#8b3636" });
+          this.pushGuardModel(drawList, target);
         }
         for (const knife of this.projectiles) {
           this.pushBoxFaces(drawList, { x: knife.x, y: knife.y, z: knife.z, w: 0.16, d: 0.8, h: 0.08, c1: "#f2f2f2", c2: "#d7d7d7", c3: "#ffffff" });
@@ -5401,6 +6138,11 @@
           ctx.fill();
           ctx.strokeStyle = "rgba(0,0,0,0.15)";
           ctx.stroke();
+        }
+        this.drawTargetAlerts();
+        if (this.damageFlash > 0.01) {
+          ctx.fillStyle = `rgba(255,68,88,${(0.28 * this.damageFlash).toFixed(3)})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         this.drawHUD();
       }
@@ -5545,7 +6287,7 @@
         if (app.mode !== "game" || app.currentKey !== "spider") return;
         const sens = 0.0028;
         this.camera.yaw = normalizeAngle(this.camera.yaw + dx * sens);
-        this.camera.pitch = clamp(this.camera.pitch - dy * sens, -1.02, 0.52);
+        this.camera.pitch -= dy * sens;
       },
       getLookDirection() {
         const cp = Math.cos(this.camera.pitch);
@@ -6481,8 +7223,11 @@
       const showPongLayout = app.mode === "game" && app.currentKey === "pong";
       gameView.classList.toggle("pong-layout", showPongLayout);
       pongSidePanel.setAttribute("aria-hidden", showPongLayout ? "false" : "true");
+      const t = currentText();
+      pongRestartBtn.textContent = t.pongRestart;
+      pongMenuBtn.textContent = t.pongMenu;
       if (!showPongLayout) return;
-      pongPauseBtn.textContent = pong.paused ? "Fortsatt" : "Pausa";
+      pongPauseBtn.textContent = pong.paused ? t.pongResume : t.pongPause;
     }
 
     function setMode(mode) {
@@ -6499,8 +7244,9 @@
       if (!game) return;
       app.currentKey = key;
       app.currentGame = game;
-      gameTitle.textContent = game.title;
-      gameHint.textContent = game.hint;
+      const meta = getLocalizedGameMeta(key, game);
+      gameTitle.textContent = meta.title;
+      gameHint.textContent = meta.hint;
       canvas.style.cursor = key === "pong" ? "none" : (key === "creator" ? "crosshair" : "default");
       setCreatorUIVisible(key === "creator");
       configureMobileControllerForGame(key);
@@ -6528,7 +7274,8 @@
     }
 
     function updateFullscreenButtons() {
-      const label = document.fullscreenElement === gameView ? "Avsluta helskarm" : "Helskarm";
+      const t = currentText();
+      const label = document.fullscreenElement === gameView ? t.fullscreenExit : t.fullscreenEnter;
       fullscreenButtons.forEach((button) => {
         button.textContent = label;
       });
@@ -6546,6 +7293,30 @@
       } catch (_) {
       }
       updateFullscreenButtons();
+    }
+
+    function closeStartupGate() {
+      startupGate.classList.remove("show");
+      startupGate.setAttribute("aria-hidden", "true");
+    }
+
+    function handleStartupContinue() {
+      startupCodeStatus.textContent = "";
+      startupCodeStatus.style.color = "";
+      applyLanguage(startupLanguage.value);
+      const code = startupCodeInput.value.trim().toLowerCase();
+      if (code && code !== "mut14" && !app.fullscreenBypass) {
+        startupCodeStatus.textContent = currentText().startupCodeBad;
+        startupCodeStatus.style.color = "#ff8ea1";
+        return;
+      }
+      if (code === "mut14") {
+        app.fullscreenBypass = true;
+        localStorage.setItem("arcade_fullscreen_bypass", "1");
+        startupCodeStatus.textContent = currentText().startupCodeOk;
+        startupCodeStatus.style.color = "#9df0b8";
+      }
+      closeStartupGate();
     }
 
     document.querySelectorAll("[data-game]").forEach((btn) => {
@@ -6572,6 +7343,14 @@
     videoGateContinueBtn.addEventListener("click", () => closeFullscreenGate(true));
     videoGate.addEventListener("click", (e) => {
       if (e.target === videoGate) closeFullscreenGate(false);
+    });
+    startupContinueBtn.addEventListener("click", handleStartupContinue);
+    startupLanguage.addEventListener("change", () => {
+      applyLanguage(startupLanguage.value);
+      startupCodeStatus.textContent = "";
+    });
+    startupCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleStartupContinue();
     });
 
     canvas.addEventListener("mousemove", (e) => {
@@ -6641,19 +7420,25 @@
     });
 
     window.addEventListener("keydown", (e) => {
+      const t = e.target;
+      const typingField = Boolean(t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT"));
       if ([
         "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
         "Space", "Enter", "Tab",
         "KeyA", "KeyD", "KeyW", "KeyS", "KeyQ", "KeyE", "KeyF", "KeyG", "KeyH",
         "ShiftLeft", "ShiftRight",
         "Digit1", "Digit2", "Digit3", "Digit4", "Digit5"
-      ].includes(e.code)) {
+      ].includes(e.code) && !typingField) {
         e.preventDefault();
       }
+      if (typingField) return;
       if (app.mode === "game" && app.currentGame && app.currentGame.onKeyDown) app.currentGame.onKeyDown(e.code, e.repeat);
     });
 
     window.addEventListener("keyup", (e) => {
+      const t = e.target;
+      const typingField = Boolean(t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT"));
+      if (typingField) return;
       if (app.mode === "game" && app.currentGame && app.currentGame.onKeyUp) app.currentGame.onKeyUp(e.code);
     });
 
@@ -6692,7 +7477,9 @@
 
     setMode("menu");
     setCreatorUIVisible(false);
-    updateFullscreenButtons();
+    startupLanguage.value = app.language;
+    applyLanguage(app.language);
+    if (hasStoredLang) closeStartupGate();
     requestAnimationFrame(frame);
   </script>
 </body>
