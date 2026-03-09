@@ -572,6 +572,87 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       cursor: default;
+      touch-action: none;
+    }
+
+    .mobile-controller {
+      display: none;
+      margin-top: 10px;
+      gap: 10px;
+      align-items: end;
+      justify-content: space-between;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    .mobile-controller.show {
+      display: flex;
+    }
+
+    .mobile-stick {
+      width: min(32vw, 142px);
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      border: 3px solid #34557f;
+      box-shadow: inset 0 0 0 2px #14253d;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(190, 220, 255, 0.18), rgba(8, 16, 30, 0.86));
+      position: relative;
+      touch-action: none;
+      flex: 0 0 auto;
+    }
+
+    .mobile-stick-knob {
+      width: 42%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      border: 2px solid #5f82af;
+      box-shadow: inset 0 0 0 2px #1f395c;
+      background: linear-gradient(#8db8ff, #5f84bf);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .mobile-action-pad {
+      flex: 1 1 auto;
+      max-width: 360px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(54px, 1fr));
+      gap: 8px;
+      touch-action: none;
+    }
+
+    .mobile-btn {
+      min-height: 44px;
+      padding: 8px 6px;
+      font-size: clamp(0.48rem, 1.4vw, 0.58rem);
+      line-height: 1.2;
+    }
+
+    .mobile-btn.active {
+      transform: translateY(2px);
+    }
+
+    .mobile-btn[hidden] {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .mobile-controller {
+        gap: 8px;
+      }
+
+      .mobile-stick {
+        width: min(35vw, 126px);
+      }
+
+      .mobile-action-pad {
+        gap: 6px;
+      }
     }
   </style>
 </head>
@@ -694,6 +775,22 @@
         </div>
       </div>
       <canvas id="game" width="480" height="270" aria-label="Spelcanvas"></canvas>
+      <div class="mobile-controller" id="mobileController" aria-hidden="true">
+        <div class="mobile-stick" id="moveStick" aria-label="Rorelse">
+          <div class="mobile-stick-knob"></div>
+        </div>
+        <div class="mobile-action-pad" id="mobileActionPad">
+          <button class="play-btn mobile-btn" id="mobileBtnX" type="button">X</button>
+          <button class="play-btn mobile-btn" id="mobileBtnY" type="button">Y</button>
+          <button class="full-btn mobile-btn" id="mobileBtnStart" type="button">Start</button>
+          <button class="play-btn mobile-btn" id="mobileBtnA" type="button">A</button>
+          <button class="play-btn mobile-btn" id="mobileBtnB" type="button">B</button>
+          <button class="back-btn mobile-btn" id="mobileBtnFire" type="button">Fire</button>
+        </div>
+        <div class="mobile-stick" id="lookStick" aria-label="Kamera">
+          <div class="mobile-stick-knob"></div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -742,6 +839,18 @@
     const videoGateCountdown = document.getElementById("videoGateCountdown");
     const videoGateContinueBtn = document.getElementById("videoGateContinueBtn");
     const videoGateCloseBtn = document.getElementById("videoGateCloseBtn");
+    const mobileController = document.getElementById("mobileController");
+    const moveStick = document.getElementById("moveStick");
+    const lookStick = document.getElementById("lookStick");
+    const mobileButtons = {
+      a: document.getElementById("mobileBtnA"),
+      b: document.getElementById("mobileBtnB"),
+      x: document.getElementById("mobileBtnX"),
+      y: document.getElementById("mobileBtnY"),
+      fire: document.getElementById("mobileBtnFire"),
+      start: document.getElementById("mobileBtnStart")
+    };
+    const supportsMobileController = window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches;
 
     const app = {
       mode: "menu",
@@ -749,7 +858,8 @@
       currentGame: null,
       lastTs: 0,
       mouseX: canvas.width * 0.5,
-      mouseY: canvas.height * 0.5
+      mouseY: canvas.height * 0.5,
+      mobileEnabled: supportsMobileController
     };
 
     const fullscreenGate = {
@@ -801,6 +911,7 @@
 
     async function lockPointerToGame() {
       if (app.mode !== "game") return;
+      if (app.mobileEnabled) return;
       if (document.pointerLockElement === canvas) return;
       try {
         await canvas.requestPointerLock();
@@ -876,6 +987,529 @@
         }, 1000);
       });
     }
+
+    // Default profile is also used for future games that do not define a custom mobile mapping.
+    const mobileControlProfiles = {
+      default: {
+        move: true,
+        look: false,
+        buttons: {
+          a: { label: "Hoppa", type: "key", code: "Space" },
+          b: { label: "Action", type: "key", code: "KeyF" },
+          x: { label: "Q", type: "key", code: "KeyQ" },
+          y: { label: "E", type: "key", code: "KeyE" },
+          fire: { label: "Fire", type: "mouse", button: 0, hold: true },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      },
+      pong: {
+        move: false,
+        look: false,
+        buttons: {
+          a: { label: "Starta", type: "click" }
+        }
+      },
+      dash: {
+        move: false,
+        look: false,
+        buttons: {
+          a: { label: "Hoppa", type: "key", code: "Space" }
+        }
+      },
+      platformer: {
+        move: true,
+        look: false,
+        buttons: {
+          a: { label: "Hoppa", type: "key", code: "Space" },
+          b: { label: "Reset", type: "key", code: "KeyR" },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      },
+      creator: {
+        move: false,
+        look: false,
+        buttons: {
+          a: { label: "Placera", type: "click" }
+        }
+      },
+      snake: {
+        move: true,
+        look: false,
+        buttons: {
+          a: { label: "Start", type: "key", code: "Space" }
+        }
+      },
+      blaster: {
+        move: true,
+        look: false,
+        buttons: {
+          a: { label: "Skjut", type: "key", code: "Space" },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      },
+      flappy: {
+        move: false,
+        look: false,
+        buttons: {
+          a: { label: "Flap", type: "key", code: "Space" }
+        }
+      },
+      fifa: {
+        move: true,
+        look: false,
+        buttons: {
+          a: { label: "Skott", type: "key", code: "Space" },
+          b: { label: "Pass", type: "key", code: "KeyE" },
+          x: { label: "Byt", type: "key", code: "KeyQ" },
+          y: { label: "Sprint", type: "key", code: "ShiftLeft", hold: true },
+          fire: { label: "Kamera", type: "key", code: "KeyF" },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      },
+      zombiefps: {
+        move: true,
+        look: true,
+        buttons: {
+          a: { label: "Fire", type: "mouse", button: 0, hold: true },
+          b: { label: "Granat", type: "key", code: "KeyG" },
+          x: { label: "Vapen1", type: "key", code: "Digit1" },
+          y: { label: "Vapen2", type: "key", code: "Digit2" },
+          fire: { label: "Sprint", type: "key", code: "ShiftLeft", hold: true },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      },
+      creed: {
+        move: true,
+        look: true,
+        buttons: {
+          a: { label: "Attack", type: "key", code: "KeyF" },
+          b: { label: "Hoppa", type: "key", code: "Space", hold: true },
+          x: { label: "Kniv", type: "key", code: "KeyH" },
+          y: { label: "Sprint", type: "key", code: "ShiftLeft", hold: true },
+          fire: { label: "Skott", type: "click" },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      },
+      spider: {
+        move: true,
+        look: true,
+        buttons: {
+          a: { label: "Web", type: "key", code: "KeyF", hold: true },
+          b: { label: "Hoppa", type: "key", code: "Space" },
+          x: { label: "Web MB1", type: "mouse", button: 0, hold: true },
+          y: { label: "Sprint", type: "key", code: "ShiftLeft", hold: true },
+          start: { label: "Start", type: "key", code: "Enter" }
+        }
+      }
+    };
+
+    const virtualInput = {
+      keyRefs: new Map(),
+      mouseRefs: new Map(),
+      moveState: { left: false, right: false, up: false, down: false },
+      look: { x: 0, y: 0 },
+      profile: mobileControlProfiles.default,
+      buttonSpecs: {},
+      buttonPointer: {},
+      stickRefs: { move: null, look: null },
+      canvasTouch: { id: null, moved: false, startX: 0, startY: 0, lastX: 0, lastY: 0 }
+    };
+
+    function emitGameKeyDown(code, repeat = false) {
+      if (app.mode === "game" && app.currentGame && app.currentGame.onKeyDown) {
+        app.currentGame.onKeyDown(code, repeat);
+      }
+    }
+
+    function emitGameKeyUp(code) {
+      if (app.mode === "game" && app.currentGame && app.currentGame.onKeyUp) {
+        app.currentGame.onKeyUp(code);
+      }
+    }
+
+    function clientPointFromVirtualMouse() {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: rect.left + (app.mouseX / canvas.width) * rect.width,
+        y: rect.top + (app.mouseY / canvas.height) * rect.height
+      };
+    }
+
+    function emitGameMouseMove(clientX, clientY, movementX = 0, movementY = 0) {
+      const e = {
+        clientX,
+        clientY,
+        movementX,
+        movementY,
+        button: 0,
+        preventDefault() {
+        }
+      };
+      updateVirtualMouse(e);
+      if (app.mode === "game" && app.currentGame && app.currentGame.onLook) {
+        app.currentGame.onLook(movementX, movementY, e);
+      }
+      if (app.mode === "game" && app.currentGame && app.currentGame.onMouseMove) {
+        app.currentGame.onMouseMove(e);
+      }
+    }
+
+    function emitGameMouseDown(button = 0, clientX = null, clientY = null) {
+      const pt = clientX == null || clientY == null ? clientPointFromVirtualMouse() : { x: clientX, y: clientY };
+      const e = {
+        clientX: pt.x,
+        clientY: pt.y,
+        movementX: 0,
+        movementY: 0,
+        button,
+        preventDefault() {
+        }
+      };
+      updateVirtualMouse(e);
+      if (app.mode === "game" && app.currentGame && app.currentGame.onMouseDown) {
+        app.currentGame.onMouseDown(e);
+      }
+    }
+
+    function emitGameMouseUp(button = 0, clientX = null, clientY = null) {
+      const pt = clientX == null || clientY == null ? clientPointFromVirtualMouse() : { x: clientX, y: clientY };
+      const e = {
+        clientX: pt.x,
+        clientY: pt.y,
+        movementX: 0,
+        movementY: 0,
+        button,
+        preventDefault() {
+        }
+      };
+      if (app.mode === "game" && app.currentGame && app.currentGame.onMouseUp) {
+        app.currentGame.onMouseUp(e);
+      }
+    }
+
+    function emitGameClick() {
+      if (app.mode === "game" && app.currentGame && app.currentGame.onClick) {
+        app.currentGame.onClick();
+      }
+    }
+
+    function holdVirtualKey(code) {
+      const count = virtualInput.keyRefs.get(code) || 0;
+      if (count === 0) emitGameKeyDown(code, false);
+      virtualInput.keyRefs.set(code, count + 1);
+    }
+
+    function releaseVirtualKey(code) {
+      const count = virtualInput.keyRefs.get(code) || 0;
+      if (count <= 1) {
+        virtualInput.keyRefs.delete(code);
+        emitGameKeyUp(code);
+        return;
+      }
+      virtualInput.keyRefs.set(code, count - 1);
+    }
+
+    function tapVirtualKey(code) {
+      holdVirtualKey(code);
+      setTimeout(() => releaseVirtualKey(code), 72);
+    }
+
+    function holdVirtualMouse(button = 0) {
+      const count = virtualInput.mouseRefs.get(button) || 0;
+      if (count === 0) emitGameMouseDown(button);
+      virtualInput.mouseRefs.set(button, count + 1);
+    }
+
+    function releaseVirtualMouse(button = 0) {
+      const count = virtualInput.mouseRefs.get(button) || 0;
+      if (count <= 1) {
+        virtualInput.mouseRefs.delete(button);
+        emitGameMouseUp(button);
+        return;
+      }
+      virtualInput.mouseRefs.set(button, count - 1);
+    }
+
+    function tapVirtualMouse(button = 0, alsoClick = false) {
+      holdVirtualMouse(button);
+      setTimeout(() => {
+        releaseVirtualMouse(button);
+        if (alsoClick) emitGameClick();
+      }, 72);
+    }
+
+    function setMoveKeyState(nextState) {
+      const map = [
+        { field: "left", code: "ArrowLeft" },
+        { field: "right", code: "ArrowRight" },
+        { field: "up", code: "ArrowUp" },
+        { field: "down", code: "ArrowDown" }
+      ];
+      for (const entry of map) {
+        const prev = virtualInput.moveState[entry.field];
+        const next = Boolean(nextState[entry.field]);
+        if (prev === next) continue;
+        virtualInput.moveState[entry.field] = next;
+        if (next) holdVirtualKey(entry.code);
+        else releaseVirtualKey(entry.code);
+      }
+    }
+
+    function applyMoveStick(x, y) {
+      const dead = 0.24;
+      setMoveKeyState({
+        left: x < -dead,
+        right: x > dead,
+        up: y < -dead,
+        down: y > dead
+      });
+    }
+
+    function applyLookStick(x, y) {
+      virtualInput.look.x = Math.abs(x) < 0.08 ? 0 : x;
+      virtualInput.look.y = Math.abs(y) < 0.08 ? 0 : y;
+    }
+
+    function resetVirtualInput() {
+      setMoveKeyState({ left: false, right: false, up: false, down: false });
+      virtualInput.look.x = 0;
+      virtualInput.look.y = 0;
+      for (const code of [...virtualInput.keyRefs.keys()]) releaseVirtualKey(code);
+      for (const button of [...virtualInput.mouseRefs.keys()]) releaseVirtualMouse(button);
+      if (virtualInput.stickRefs.move) virtualInput.stickRefs.move.reset();
+      if (virtualInput.stickRefs.look) virtualInput.stickRefs.look.reset();
+      for (const slot of Object.keys(virtualInput.buttonPointer)) {
+        virtualInput.buttonPointer[slot] = null;
+      }
+    }
+
+    function shouldShowMobileController() {
+      return app.mobileEnabled && app.mode === "game";
+    }
+
+    function updateMobileControllerVisibility() {
+      const show = shouldShowMobileController();
+      mobileController.classList.toggle("show", show);
+      mobileController.setAttribute("aria-hidden", show ? "false" : "true");
+    }
+
+    function getMobileProfile(key) {
+      return mobileControlProfiles[key] || mobileControlProfiles.default;
+    }
+
+    function setupMobileButtons(profile) {
+      virtualInput.profile = profile;
+      virtualInput.buttonSpecs = {};
+      for (const [slot, button] of Object.entries(mobileButtons)) {
+        const spec = profile.buttons && profile.buttons[slot] ? profile.buttons[slot] : null;
+        virtualInput.buttonSpecs[slot] = spec;
+        button.hidden = !spec;
+        if (!spec) continue;
+        button.textContent = spec.label;
+      }
+    }
+
+    function configureMobileControllerForGame(key) {
+      const profile = getMobileProfile(key);
+      setupMobileButtons(profile);
+      moveStick.hidden = !profile.move;
+      lookStick.hidden = !profile.look;
+      applyMoveStick(0, 0);
+      applyLookStick(0, 0);
+      if (!profile.move && virtualInput.stickRefs.move) virtualInput.stickRefs.move.reset();
+      if (!profile.look && virtualInput.stickRefs.look) virtualInput.stickRefs.look.reset();
+      updateMobileControllerVisibility();
+    }
+
+    function performMobileAction(spec) {
+      if (!spec) return;
+      if (spec.type === "key") {
+        if (spec.hold) holdVirtualKey(spec.code);
+        else tapVirtualKey(spec.code);
+        return;
+      }
+      if (spec.type === "mouse") {
+        if (spec.hold) holdVirtualMouse(spec.button || 0);
+        else tapVirtualMouse(spec.button || 0, false);
+        return;
+      }
+      if (spec.type === "click") {
+        emitGameClick();
+      }
+    }
+
+    function releaseMobileAction(spec) {
+      if (!spec || !spec.hold) return;
+      if (spec.type === "key") releaseVirtualKey(spec.code);
+      if (spec.type === "mouse") releaseVirtualMouse(spec.button || 0);
+    }
+
+    function bindMobileButton(slot, button) {
+      virtualInput.buttonPointer[slot] = null;
+      const onRelease = (e) => {
+        if (virtualInput.buttonPointer[slot] !== e.pointerId) return;
+        const spec = virtualInput.buttonSpecs[slot];
+        releaseMobileAction(spec);
+        button.classList.remove("active");
+        virtualInput.buttonPointer[slot] = null;
+      };
+
+      button.addEventListener("pointerdown", (e) => {
+        if (!shouldShowMobileController()) return;
+        const spec = virtualInput.buttonSpecs[slot];
+        if (!spec) return;
+        e.preventDefault();
+        virtualInput.buttonPointer[slot] = e.pointerId;
+        button.classList.add("active");
+        button.setPointerCapture(e.pointerId);
+        performMobileAction(spec);
+      });
+      button.addEventListener("pointerup", onRelease);
+      button.addEventListener("pointercancel", onRelease);
+      button.addEventListener("lostpointercapture", (e) => {
+        if (virtualInput.buttonPointer[slot] !== e.pointerId) return;
+        const spec = virtualInput.buttonSpecs[slot];
+        releaseMobileAction(spec);
+        button.classList.remove("active");
+        virtualInput.buttonPointer[slot] = null;
+      });
+      button.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
+
+    function createVirtualStick(stickEl, onChange) {
+      const knob = stickEl.querySelector(".mobile-stick-knob");
+      const state = {
+        pointerId: null,
+        maxOffset: 0
+      };
+
+      function updateFromClient(clientX, clientY) {
+        const rect = stickEl.getBoundingClientRect();
+        const cx = rect.left + rect.width * 0.5;
+        const cy = rect.top + rect.height * 0.5;
+        const dxRaw = clientX - cx;
+        const dyRaw = clientY - cy;
+        const max = Math.max(12, rect.width * 0.34);
+        state.maxOffset = max;
+        const dist = Math.hypot(dxRaw, dyRaw);
+        const ratio = dist > max ? max / dist : 1;
+        const dx = dxRaw * ratio;
+        const dy = dyRaw * ratio;
+        knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        onChange(clamp(dx / max, -1, 1), clamp(dy / max, -1, 1));
+      }
+
+      function reset() {
+        knob.style.transform = "translate(-50%, -50%)";
+        onChange(0, 0);
+      }
+
+      stickEl.addEventListener("pointerdown", (e) => {
+        if (!shouldShowMobileController()) return;
+        e.preventDefault();
+        state.pointerId = e.pointerId;
+        stickEl.setPointerCapture(e.pointerId);
+        updateFromClient(e.clientX, e.clientY);
+      });
+
+      stickEl.addEventListener("pointermove", (e) => {
+        if (state.pointerId !== e.pointerId) return;
+        e.preventDefault();
+        updateFromClient(e.clientX, e.clientY);
+      });
+
+      const end = (e) => {
+        if (state.pointerId !== e.pointerId) return;
+        e.preventDefault();
+        state.pointerId = null;
+        reset();
+      };
+
+      stickEl.addEventListener("pointerup", end);
+      stickEl.addEventListener("pointercancel", end);
+      stickEl.addEventListener("lostpointercapture", (e) => {
+        if (state.pointerId !== e.pointerId) return;
+        state.pointerId = null;
+        reset();
+      });
+      stickEl.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      return { reset };
+    }
+
+    function findTouchById(list, id) {
+      for (let i = 0; i < list.length; i += 1) {
+        if (list[i].identifier === id) return list[i];
+      }
+      return null;
+    }
+
+    function bindCanvasTouchInput() {
+      const state = virtualInput.canvasTouch;
+
+      canvas.addEventListener("touchstart", (e) => {
+        if (!shouldShowMobileController() || state.id !== null) return;
+        const touch = e.changedTouches[0];
+        if (!touch) return;
+        state.id = touch.identifier;
+        state.moved = false;
+        state.startX = touch.clientX;
+        state.startY = touch.clientY;
+        state.lastX = touch.clientX;
+        state.lastY = touch.clientY;
+        emitGameMouseMove(touch.clientX, touch.clientY, 0, 0);
+        emitGameMouseDown(0, touch.clientX, touch.clientY);
+        e.preventDefault();
+      }, { passive: false });
+
+      canvas.addEventListener("touchmove", (e) => {
+        if (!shouldShowMobileController() || state.id === null) return;
+        const touch = findTouchById(e.touches, state.id);
+        if (!touch) return;
+        const dx = touch.clientX - state.lastX;
+        const dy = touch.clientY - state.lastY;
+        if (Math.hypot(touch.clientX - state.startX, touch.clientY - state.startY) > 10) {
+          state.moved = true;
+        }
+        state.lastX = touch.clientX;
+        state.lastY = touch.clientY;
+        emitGameMouseMove(touch.clientX, touch.clientY, dx, dy);
+        e.preventDefault();
+      }, { passive: false });
+
+      const endTouch = (e) => {
+        if (!shouldShowMobileController() || state.id === null) return;
+        const touch = findTouchById(e.changedTouches, state.id);
+        if (!touch) return;
+        emitGameMouseUp(0, touch.clientX, touch.clientY);
+        if (!state.moved) emitGameClick();
+        state.id = null;
+        state.moved = false;
+        e.preventDefault();
+      };
+
+      canvas.addEventListener("touchend", endTouch, { passive: false });
+      canvas.addEventListener("touchcancel", endTouch, { passive: false });
+    }
+
+    function applyMobileLook(dtScale) {
+      if (!shouldShowMobileController()) return;
+      if (!virtualInput.profile.look) return;
+      if (Math.abs(virtualInput.look.x) < 0.001 && Math.abs(virtualInput.look.y) < 0.001) return;
+      if (app.mode !== "game" || !app.currentGame || !app.currentGame.onLook) return;
+      const speed = 9.6;
+      const dx = virtualInput.look.x * speed * dtScale;
+      const dy = virtualInput.look.y * speed * dtScale;
+      app.currentGame.onLook(dx, dy);
+    }
+
+    for (const [slot, button] of Object.entries(mobileButtons)) {
+      bindMobileButton(slot, button);
+    }
+    virtualInput.stickRefs.move = createVirtualStick(moveStick, applyMoveStick);
+    virtualInput.stickRefs.look = createVirtualStick(lookStick, applyLookStick);
+    bindCanvasTouchInput();
+    configureMobileControllerForGame("");
 
     const pong = {
       title: "Pong Breakout",
@@ -5038,6 +5672,7 @@
       const inMenu = mode === "menu";
       menu.style.display = inMenu ? "block" : "none";
       gameView.style.display = inMenu ? "none" : "block";
+      updateMobileControllerVisibility();
     }
 
     function startGame(key) {
@@ -5049,6 +5684,8 @@
       gameHint.textContent = game.hint;
       canvas.style.cursor = key === "pong" ? "none" : (key === "creator" ? "crosshair" : "default");
       setCreatorUIVisible(key === "creator");
+      configureMobileControllerForGame(key);
+      resetVirtualInput();
       game.init();
       setMode("game");
       lockPointerToGame();
@@ -5064,6 +5701,8 @@
       app.currentKey = "";
       canvas.style.cursor = "default";
       setCreatorUIVisible(false);
+      configureMobileControllerForGame("");
+      resetVirtualInput();
       setMode("menu");
     }
 
@@ -5132,7 +5771,7 @@
     });
 
     canvas.addEventListener("click", () => {
-      if (app.mode === "game") lockPointerToGame();
+      if (app.mode === "game" && !app.mobileEnabled) lockPointerToGame();
       if (app.mode !== "game" || !app.currentGame || !app.currentGame.onClick) return;
       app.currentGame.onClick();
     });
@@ -5183,6 +5822,14 @@
       if (app.mode === "game" && app.currentGame && app.currentGame.onKeyUp) app.currentGame.onKeyUp(e.code);
     });
 
+    window.addEventListener("blur", () => {
+      resetVirtualInput();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) resetVirtualInput();
+    });
+
     function frame(ts) {
       const dt = Math.min(34, ts - (app.lastTs || ts));
       app.lastTs = ts;
@@ -5190,6 +5837,7 @@
 
       ctx.imageSmoothingEnabled = false;
       if (app.mode === "game" && app.currentGame) {
+        applyMobileLook(dtScale);
         app.currentGame.update(dtScale);
         app.currentGame.draw();
       }
