@@ -517,13 +517,18 @@
     .game-view:fullscreen .game-head,
     .game-view:fullscreen .hint,
     .game-view:fullscreen .creator-ui,
-    .game-view:fullscreen .mobile-controller,
     .game-view:fullscreen .pong-side-panel,
     .game-view:-webkit-full-screen .game-head,
     .game-view:-webkit-full-screen .hint,
     .game-view:-webkit-full-screen .creator-ui,
-    .game-view:-webkit-full-screen .mobile-controller,
     .game-view:-webkit-full-screen .pong-side-panel {
+      display: none !important;
+    }
+
+    .game-view:fullscreen .mobile-side,
+    .game-view:fullscreen .mobile-rotate-lock,
+    .game-view:-webkit-full-screen .mobile-side,
+    .game-view:-webkit-full-screen .mobile-rotate-lock {
       display: none !important;
     }
 
