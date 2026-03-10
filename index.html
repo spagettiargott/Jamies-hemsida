@@ -1350,7 +1350,7 @@
       },
       mejmut: {
         title: "Mej-mut Fighting",
-        hint: "A/D or arrows move. F punch, G kick, H special, Space jump, Q block."
+        hint: "A/D move, W jump, S/Down crouch, F punch, G kick, H special, Q block."
       }
     };
 
@@ -6633,17 +6633,37 @@
 
     const mejmut = {
       title: "Mej-mut Fighting",
-      hint: "Valj figur med A/D eller pilar. Enter startar. I match: A/D flytta, W/upp/Space hoppa, F slag, G spark, H special, Q block.",
+      hint: "First choose Solo or Multiplayer. In fight: A/D move, W jump, S/Down crouch, Q block, F punch, G kick, H special.",
       roster: [
         { name: "Mej-mut", hp: 120, speed: 1.02, power: 1.08, defense: 1, jump: 6.7, reach: 1.05, c1: "#ff5d73", c2: "#8a1f3f", skin: "#f1c8a2", hair: "#1b1f2a" },
         { name: "Jamie", hp: 114, speed: 1.16, power: 0.98, defense: 0.96, jump: 7.1, reach: 0.94, c1: "#4cc9f0", c2: "#1b5f8f", skin: "#f0c39a", hair: "#2c374a" },
         { name: "Emil", hp: 132, speed: 0.91, power: 1.2, defense: 1.1, jump: 6.2, reach: 1.1, c1: "#ff9f43", c2: "#8a4d16", skin: "#efbf98", hair: "#3a2b20" },
         { name: "Axel", hp: 118, speed: 1.04, power: 1.02, defense: 1.02, jump: 6.8, reach: 1.2, c1: "#7ae582", c2: "#266a34", skin: "#f1c9a7", hair: "#2b4630" },
-        { name: "Malte", hp: 126, speed: 0.98, power: 1.06, defense: 1.14, jump: 6.4, reach: 1, c1: "#c77dff", c2: "#5e2f7f", skin: "#eac09c", hair: "#352245" }
+        { name: "Malte", hp: 126, speed: 0.98, power: 1.06, defense: 1.14, jump: 6.4, reach: 1, c1: "#c77dff", c2: "#5e2f7f", skin: "#eac09c", hair: "#352245" },
+        { name: "Arvid", hp: 130, speed: 1.03, power: 1.14, defense: 1.08, jump: 6.6, reach: 1.08, c1: "#59c17e", c2: "#236a40", skin: "#f2c8a4", hair: "#f4dc72" }
       ],
-      state: "select",
+      maps: [
+        { name: "Neon Street", id: "street" },
+        { name: "Rooftop Clash", id: "roof" },
+        { name: "Boxing Ring", id: "ring" },
+        { name: "Underground Dojo", id: "dojo" }
+      ],
+      state: "entry",
+      rootMode: 0,
+      rootModes: ["SOLO", "MULTIPLAYER"],
+      selectedRow: 0,
       selectedIndex: 0,
       enemyIndex: 1,
+      remoteSelectedIndex: 1,
+      netMode: 0,
+      netModes: ["HOST", "JOIN"],
+      playMode: 0,
+      playModes: ["VS", "WAVES"],
+      waveOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      waveOptionIndex: 0,
+      mapIndex: 0,
+      onlineVs: false,
+      onlineCoop: false,
       playerWins: 0,
       enemyWins: 0,
       round: 1,
@@ -6655,13 +6675,49 @@
       impactFlash: 0,
       cameraShake: 0,
       particles: [],
-      keys: { left: false, right: false, jump: false, block: false },
+      projectiles: [],
+      coopWave: 1,
+      coopMaxWaves: 10,
+      coopClearTimer: 0,
+      coopIntroTimer: 0,
+      coopIntroTitle: "",
+      coopIntroSub: "",
+      coopEnemies: [],
+      keys: { left: false, right: false, jump: false, crouch: false, block: false },
+      pulses: { light: 0, heavy: 0, special: 0 },
+      net: { role: "none", channel: null, code: "", connected: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0 },
+      npcModelPath: "assets/models/Ch36_nonPBR.fbx",
+      npc3d: {
+        loading: false,
+        ready: false,
+        failed: false,
+        status: "",
+        canvas: null,
+        renderer: null,
+        scene: null,
+        camera: null,
+        model: null,
+        mixer: null,
+        actions: {},
+        activeAction: "",
+        lastTick: 0
+      },
       player: null,
       enemy: null,
       init() {
-        this.state = "select";
+        if (this.closeNetwork) this.closeNetwork();
+        this.state = "entry";
+        this.rootMode = 0;
+        this.selectedRow = 0;
         this.selectedIndex = 0;
         this.enemyIndex = 1;
+        this.remoteSelectedIndex = 1;
+        this.netMode = 0;
+        this.playMode = 0;
+        this.waveOptionIndex = 0;
+        this.mapIndex = 0;
+        this.onlineVs = false;
+        this.onlineCoop = false;
         this.playerWins = 0;
         this.enemyWins = 0;
         this.round = 1;
@@ -6672,12 +6728,366 @@
         this.impactFlash = 0;
         this.cameraShake = 0;
         this.particles = [];
+        this.projectiles = [];
+        this.coopWave = 1;
+        this.coopMaxWaves = 10;
+        this.coopClearTimer = 0;
+        this.coopIntroTimer = 0;
+        this.coopIntroTitle = "";
+        this.coopIntroSub = "";
+        this.coopEnemies = [];
         this.keys.left = false;
         this.keys.right = false;
         this.keys.jump = false;
         this.keys.block = false;
+        this.keys.crouch = false;
+        this.pulses.light = 0;
+        this.pulses.heavy = 0;
+        this.pulses.special = 0;
         this.player = null;
         this.enemy = null;
+      },
+      onExit() {
+        this.closeNetwork();
+      },
+      currentMap() {
+        return this.maps[this.mapIndex];
+      },
+      emptyInput() {
+        return { left: false, right: false, jump: false, crouch: false, block: false, light: 0, heavy: 0, special: 0 };
+      },
+      collectInput() {
+        return {
+          left: this.keys.left,
+          right: this.keys.right,
+          jump: this.keys.jump,
+          crouch: this.keys.crouch,
+          block: this.keys.block,
+          light: this.pulses.light,
+          heavy: this.pulses.heavy,
+          special: this.pulses.special
+        };
+      },
+      loadScriptOnce(src) {
+        if (!window.__mejmutScriptLoads) window.__mejmutScriptLoads = {};
+        if (window.__mejmutScriptLoads[src]) return window.__mejmutScriptLoads[src];
+        window.__mejmutScriptLoads[src] = new Promise((resolve, reject) => {
+          const existing = document.querySelector(`script[data-src="${src}"]`);
+          if (existing) {
+            if (existing.dataset.loaded === "1") {
+              resolve();
+              return;
+            }
+            existing.addEventListener("load", () => resolve(), { once: true });
+            existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+            return;
+          }
+          const s = document.createElement("script");
+          s.src = src;
+          s.async = true;
+          s.dataset.src = src;
+          s.onload = () => {
+            s.dataset.loaded = "1";
+            resolve();
+          };
+          s.onerror = () => reject(new Error(`Failed to load ${src}`));
+          document.head.appendChild(s);
+        });
+        return window.__mejmutScriptLoads[src];
+      },
+      pickNpc3dClips(clips = []) {
+        const pick = {
+          idle: null,
+          walk: null,
+          punch: null,
+          kick: null,
+          special: null,
+          jump: null,
+          crouch: null
+        };
+        const byName = (re) => clips.find((c) => re.test(String(c.name || "").toLowerCase())) || null;
+        pick.idle = byName(/idle|stand|breath/);
+        pick.walk = byName(/walk|run|jog|move/);
+        pick.punch = byName(/punch|jab|attack1|light/);
+        pick.kick = byName(/kick|attack2|heavy/);
+        pick.special = byName(/special|power|attack3|attack4|spin/);
+        pick.jump = byName(/jump|air/);
+        pick.crouch = byName(/crouch|duck/);
+        if (!pick.idle && clips[0]) pick.idle = clips[0];
+        if (!pick.walk) pick.walk = pick.idle;
+        if (!pick.punch) pick.punch = pick.idle;
+        if (!pick.kick) pick.kick = pick.punch || pick.idle;
+        if (!pick.special) pick.special = pick.kick || pick.idle;
+        if (!pick.jump) pick.jump = pick.idle;
+        if (!pick.crouch) pick.crouch = pick.idle;
+        return pick;
+      },
+      setNpc3dAction(name) {
+        const sys = this.npc3d;
+        if (!sys.ready || !sys.actions[name]) return;
+        if (sys.activeAction === name) return;
+        const current = sys.actions[sys.activeAction];
+        const next = sys.actions[name];
+        if (current) current.fadeOut(0.12);
+        next.reset().fadeIn(0.12).play();
+        sys.activeAction = name;
+      },
+      ensureNpc3d() {
+        const sys = this.npc3d;
+        if (sys.ready || sys.loading || sys.failed) return;
+        sys.loading = true;
+        sys.status = "loading";
+        this.loadScriptOnce("assets/vendor/three/build/three.min.js")
+          .then(() => this.loadScriptOnce("assets/vendor/three/examples/js/loaders/FBXLoader.js"))
+          .then(() => new Promise((resolve, reject) => {
+            if (!window.THREE || !window.THREE.FBXLoader) {
+              reject(new Error("THREE or FBXLoader missing"));
+              return;
+            }
+            const loader = new window.THREE.FBXLoader();
+            loader.load(this.npcModelPath, (obj) => resolve(obj), undefined, reject);
+          }))
+          .then((obj) => {
+            const THREE = window.THREE;
+            const canvas3d = document.createElement("canvas");
+            canvas3d.width = 220;
+            canvas3d.height = 220;
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, alpha: true, antialias: true, preserveDrawingBuffer: true });
+            renderer.setPixelRatio(1);
+            renderer.setSize(canvas3d.width, canvas3d.height, false);
+            renderer.setClearColor(0x000000, 0);
+            if (typeof THREE.sRGBEncoding !== "undefined") renderer.outputEncoding = THREE.sRGBEncoding;
+            if (typeof THREE.ACESFilmicToneMapping !== "undefined") renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.08;
+            if (typeof renderer.gammaOutput !== "undefined") renderer.gammaOutput = true;
+            if (typeof renderer.gammaFactor !== "undefined") renderer.gammaFactor = 2.0;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(32, canvas3d.width / canvas3d.height, 0.1, 100);
+            camera.position.set(0, 1.22, 2.85);
+            camera.lookAt(0, 0.95, 0);
+
+            const hemi = new THREE.HemisphereLight(0xfafcff, 0x1b2436, 1.05);
+            const key = new THREE.DirectionalLight(0xffffff, 0.95);
+            key.position.set(1.8, 3.2, 2.3);
+            const fill = new THREE.DirectionalLight(0x7fb3ff, 0.46);
+            fill.position.set(-2.2, 1.9, -1.9);
+            const rim = new THREE.DirectionalLight(0xb3e7ff, 0.72);
+            rim.position.set(-1.2, 2.4, 2.6);
+            scene.add(hemi, key, fill, rim);
+
+            const stage = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.9, 1.15, 0.06, 28),
+              new THREE.MeshPhongMaterial({ color: 0x202b45, transparent: true, opacity: 0.46, shininess: 22 })
+            );
+            stage.position.set(0, -0.03, 0);
+            scene.add(stage);
+
+            const toToonMaterial = (mat) => {
+              if (!mat || mat.isMeshToonMaterial) return mat;
+              const toon = new THREE.MeshToonMaterial({
+                color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff),
+                map: mat.map || null,
+                transparent: !!mat.transparent,
+                opacity: typeof mat.opacity === "number" ? mat.opacity : 1,
+                skinning: !!mat.skinning,
+                side: typeof mat.side === "number" ? mat.side : THREE.FrontSide
+              });
+              toon.needsUpdate = true;
+              return toon;
+            };
+
+            obj.traverse((n) => {
+              if (n.isMesh) {
+                n.castShadow = false;
+                n.receiveShadow = false;
+                if (Array.isArray(n.material)) n.material = n.material.map((m) => toToonMaterial(m));
+                else n.material = toToonMaterial(n.material);
+              }
+            });
+
+            const size = new THREE.Vector3();
+            const center = new THREE.Vector3();
+            const box = new THREE.Box3().setFromObject(obj);
+            box.getSize(size);
+            box.getCenter(center);
+            const h = Math.max(0.0001, size.y);
+            const norm = 1.7 / h;
+            obj.scale.multiplyScalar(norm);
+
+            const box2 = new THREE.Box3().setFromObject(obj);
+            box2.getCenter(center);
+            obj.position.sub(center);
+            obj.position.y -= box2.min.y;
+            obj.rotation.y = Math.PI * 0.45;
+            scene.add(obj);
+
+            const mixer = obj.animations && obj.animations.length ? new THREE.AnimationMixer(obj) : null;
+            const clips = this.pickNpc3dClips(obj.animations || []);
+            const actions = {};
+            if (mixer) {
+              for (const [k, clip] of Object.entries(clips)) {
+                if (!clip || actions[k]) continue;
+                const action = mixer.clipAction(clip);
+                action.enabled = true;
+                action.loop = THREE.LoopRepeat;
+                action.clampWhenFinished = false;
+                actions[k] = action;
+              }
+              if (actions.idle) {
+                actions.idle.play();
+              } else {
+                const first = Object.values(actions)[0];
+                if (first) first.play();
+              }
+            }
+
+            sys.canvas = canvas3d;
+            sys.renderer = renderer;
+            sys.scene = scene;
+            sys.camera = camera;
+            sys.model = obj;
+            sys.mixer = mixer;
+            sys.actions = actions;
+            sys.activeAction = actions.idle ? "idle" : (Object.keys(actions)[0] || "");
+            sys.lastTick = performance.now();
+            sys.ready = true;
+            sys.loading = false;
+            sys.status = "ready";
+          })
+          .catch((err) => {
+            sys.loading = false;
+            sys.failed = true;
+            sys.status = err && err.message ? err.message : "load failed";
+          });
+      },
+      drawNpcModel3d(fighter, x, groundY, scale, dir) {
+        // Pixel-art mode is active; 3D model drawing is intentionally disabled.
+        return false;
+      },
+      genCode() {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+        for (let i = 0; i < 6; i += 1) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+      },
+      closeNetwork() {
+        if (this.net.channel) {
+          try { this.net.channel.close(); } catch (_) {}
+        }
+        this.net = {
+          role: "none",
+          channel: null,
+          code: "",
+          connected: false,
+          remoteInput: this.emptyInput(),
+          sendTimer: 0,
+          snapTimer: 0,
+          joinTimer: 0
+        };
+      },
+      sendNet(msg) {
+        if (!this.net.channel) return;
+        try { this.net.channel.postMessage(msg); } catch (_) {}
+      },
+      startHostLobby() {
+        if (typeof BroadcastChannel === "undefined") {
+          this.winnerText = "BroadcastChannel saknas";
+          this.state = "match-over";
+          return;
+        }
+        this.closeNetwork();
+        const code = this.genCode();
+        const channel = new BroadcastChannel(`mejmut-${code}`);
+        this.net.role = "host";
+        this.net.channel = channel;
+        this.net.code = code;
+        this.net.connected = false;
+        this.net.remoteInput = this.emptyInput();
+        channel.onmessage = (e) => this.handleNet(e.data);
+        this.state = "lobby-host";
+      },
+      startJoinLobby() {
+        if (typeof BroadcastChannel === "undefined") {
+          this.winnerText = "BroadcastChannel saknas";
+          this.state = "match-over";
+          return;
+        }
+        const raw = window.prompt("Skriv host-kod", "") || "";
+        const code = raw.trim().toUpperCase();
+        if (!code) return;
+        this.closeNetwork();
+        const channel = new BroadcastChannel(`mejmut-${code}`);
+        this.net.role = "guest";
+        this.net.channel = channel;
+        this.net.code = code;
+        this.net.connected = false;
+        this.net.remoteInput = this.emptyInput();
+        this.net.joinTimer = 0;
+        channel.onmessage = (e) => this.handleNet(e.data);
+        this.state = "lobby-join";
+        this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
+      },
+      handleNet(m) {
+        if (!m || !m.t) return;
+        if (this.net.role === "host") {
+          if (m.t === "join" && this.state === "lobby-host" && !this.net.connected) {
+            this.net.connected = true;
+            this.remoteSelectedIndex = clamp(Number(m.selectedIndex) || 0, 0, this.roster.length - 1);
+            this.sendNet({
+              t: "accept",
+              playMode: this.playMode,
+              mapIndex: this.mapIndex,
+              startWave: this.waveOptions[this.waveOptionIndex],
+              hostIndex: this.selectedIndex,
+              guestIndex: this.remoteSelectedIndex
+            });
+            this.startHostSession();
+            return;
+          }
+          if (m.t === "input") this.net.remoteInput = m.i || this.emptyInput();
+          return;
+        }
+        if (this.net.role !== "guest") return;
+        if (m.t === "accept" && !this.net.connected && this.state === "lobby-join") {
+          this.net.connected = true;
+          this.playMode = clamp(Number(m.playMode) || 0, 0, this.playModes.length - 1);
+          this.mapIndex = clamp(Number(m.mapIndex) || 0, 0, this.maps.length - 1);
+          const startWave = clamp(Number(m.startWave) || 1, 1, this.coopMaxWaves);
+          const optionIdx = this.waveOptions.indexOf(startWave);
+          if (optionIdx >= 0) this.waveOptionIndex = optionIdx;
+          this.enemyIndex = clamp(Number(m.hostIndex) || 0, 0, this.roster.length - 1);
+          this.remoteSelectedIndex = clamp(Number(m.guestIndex) || this.selectedIndex, 0, this.roster.length - 1);
+          this.state = "guest-wait";
+          return;
+        }
+        if (m.t === "snap" && this.net.connected) this.applySnapshot(m.s);
+      },
+      startFromSelect() {
+        this.onlineVs = false;
+        this.onlineCoop = false;
+        if (this.state === "select-solo") {
+          this.closeNetwork();
+          if (this.playMode === 0) this.startVs();
+          else this.startCoop(false);
+          return;
+        }
+        if (this.state !== "select-multi") return;
+        if (this.netMode === 0) {
+          this.startHostLobby();
+          return;
+        }
+        this.startJoinLobby();
+      },
+      startHostSession() {
+        this.onlineVs = this.playMode === 0;
+        this.onlineCoop = this.playMode === 1;
+        if (this.playMode === 0) {
+          this.enemyIndex = this.remoteSelectedIndex;
+          this.startVs();
+        } else {
+          this.startCoop(true);
+        }
       },
       createFighter(profile, side) {
         return {
@@ -6694,6 +7104,9 @@
           maxHp: profile.hp,
           moveDir: 0,
           onGround: true,
+          block: false,
+          crouch: false,
+          jumpQueued: false,
           attackKind: "",
           attackTimer: 0,
           attackHit: false,
@@ -6701,20 +7114,30 @@
           stun: 0,
           combo: 0,
           comboTimer: 0,
-          specialMeter: 36
+          specialMeter: 36,
+          renderScale: 1,
+          isBoss: false,
+          lastLight: 0,
+          lastHeavy: 0,
+          lastSpecial: 0
         };
       },
-      randomEnemyIndex() {
+      randomEnemyIndex(excluded = []) {
         if (this.roster.length <= 1) return 0;
-        let idx = this.selectedIndex;
-        while (idx === this.selectedIndex) idx = Math.floor(Math.random() * this.roster.length);
+        const avoid = new Set(excluded);
+        let idx = Math.floor(Math.random() * this.roster.length);
+        let guard = 0;
+        while (avoid.has(idx) && guard < 32) {
+          idx = Math.floor(Math.random() * this.roster.length);
+          guard += 1;
+        }
         return idx;
       },
-      startMatch() {
+      startVs() {
         this.playerWins = 0;
         this.enemyWins = 0;
         this.round = 1;
-        this.enemyIndex = this.randomEnemyIndex();
+        if (!this.onlineVs) this.enemyIndex = this.randomEnemyIndex([this.selectedIndex]);
         this.startRound();
       },
       startRound() {
@@ -6725,22 +7148,130 @@
         this.cameraShake = 0;
         this.aiTimer = 0;
         this.particles = [];
+        this.projectiles = [];
         this.keys.left = false;
         this.keys.right = false;
         this.keys.jump = false;
+        this.keys.crouch = false;
         this.keys.block = false;
+        this.pulses.light = 0;
+        this.pulses.heavy = 0;
+        this.pulses.special = 0;
         this.player = this.createFighter(this.roster[this.selectedIndex], "left");
         this.enemy = this.createFighter(this.roster[this.enemyIndex], "right");
         this.state = "fight";
       },
+      startCoop(withRemote) {
+        this.onlineCoop = withRemote;
+        this.playerWins = 0;
+        this.enemyWins = 0;
+        this.round = 1;
+        this.winnerText = "";
+        this.particles = [];
+        this.projectiles = [];
+        this.keys = { left: false, right: false, jump: false, crouch: false, block: false };
+        this.pulses.light = 0;
+        this.pulses.heavy = 0;
+        this.pulses.special = 0;
+        this.player = this.createFighter(this.roster[this.selectedIndex], "left");
+        if (withRemote) {
+          const mateIndex = this.remoteSelectedIndex;
+          this.enemyIndex = mateIndex;
+          this.enemy = this.createFighter(this.roster[mateIndex], "right");
+          this.enemy.x = 220;
+        } else {
+          this.enemy = null;
+        }
+        const startWave = clamp(this.waveOptions[this.waveOptionIndex] || 1, 1, this.coopMaxWaves);
+        this.coopWave = startWave;
+        this.coopEnemies = [];
+        this.coopClearTimer = 0;
+        this.coopIntroTimer = 0;
+        this.coopIntroTitle = "";
+        this.coopIntroSub = "";
+        this.state = "coop-fight";
+        this.startCoopWave(startWave);
+      },
+      startCoopWave(wave) {
+        this.coopWave = wave;
+        this.coopEnemies = [];
+        this.coopClearTimer = 0;
+        this.projectiles = [];
+        this.coopIntroTimer = 0;
+        this.coopIntroTitle = "";
+        this.coopIntroSub = "";
+        if (wave === 5 || wave === 10) {
+          const bossProfile = wave === 5
+            ? {
+                name: "Arvid",
+                hp: 300,
+                speed: 1.04,
+                power: 1.28,
+                defense: 1.2,
+                jump: 6.6,
+                reach: 1.16,
+                c1: "#59c17e",
+                c2: "#236a40",
+                skin: "#f2c8a4",
+                hair: "#f4dc72"
+              }
+            : {
+                name: "Oliwer",
+                hp: 420,
+                speed: 1.12,
+                power: 1.45,
+                defense: 1.34,
+                jump: 6.9,
+                reach: 1.24,
+                c1: "#ff8a2a",
+                c2: "#964a08",
+                skin: "#efc39e",
+                hair: "#ff7a1a"
+              };
+          const boss = this.createFighter(bossProfile, "right");
+          boss.x = 320;
+          boss.specialMeter = wave === 10 ? 70 : 50;
+          boss.renderScale = wave === 10 ? 1.42 : 1.34;
+          boss.isBoss = true;
+          this.coopIntroTimer = 150;
+          this.coopIntroTitle = bossProfile.name;
+          this.coopIntroSub = `WAVE ${wave} BOSS`;
+          this.coopEnemies.push(boss);
+          return;
+        }
+        const count = Math.min(1 + Math.floor((wave - 1) / 2), 6);
+        for (let i = 0; i < count; i += 1) {
+          const idx = this.randomEnemyIndex([this.selectedIndex, this.enemyIndex]);
+          const base = this.roster[idx];
+          const profileScale = clamp(0.55 + (wave - 1) * 0.13, 0.55, 1.6);
+          const npcProfile = {
+            ...base,
+            speed: base.speed * clamp(0.72 + (wave - 1) * 0.07, 0.72, 1.45),
+            power: base.power * profileScale,
+            defense: base.defense * clamp(0.78 + (wave - 1) * 0.06, 0.78, 1.45),
+            jump: base.jump * clamp(0.86 + (wave - 1) * 0.04, 0.86, 1.25),
+            reach: base.reach * clamp(0.92 + (wave - 1) * 0.03, 0.92, 1.25)
+          };
+          const npc = this.createFighter(npcProfile, "right");
+          npc.x = 280 + (i % 3) * 52 + (Math.random() - 0.5) * 10;
+          npc.hp = Math.round(npc.hp * clamp(0.42 + wave * 0.14, 0.56, 1.55));
+          npc.maxHp = npc.hp;
+          npc.specialMeter = 0;
+          this.coopEnemies.push(npc);
+        }
+      },
       attackData(fighter, kind) {
         const p = fighter.profile;
-        if (kind === "light") return { kind, duration: 14, activeStart: 4, activeEnd: 8, reach: 31 * p.reach, damage: 8 * p.power, push: 2.8, lift: 1.7, stun: 14, meter: 4 };
-        if (kind === "heavy") return { kind, duration: 22, activeStart: 7, activeEnd: 13, reach: 40 * p.reach, damage: 12 * p.power, push: 3.8, lift: 2.6, stun: 20, meter: 7 };
-        return { kind: "special", duration: 28, activeStart: 10, activeEnd: 18, reach: 51 * p.reach, damage: 18 * p.power, push: 4.9, lift: 3.1, stun: 24, meter: -30 };
+        const loweredName = String(p.name || "").toLowerCase();
+        if (kind === "light") return { kind, attackType: "punch", duration: 14, activeStart: 4, activeEnd: 8, reach: 31 * p.reach, damage: 8 * p.power, push: 2.8, lift: 1.7, stun: 14, meter: 4, hitsCrouching: false };
+        if (kind === "heavy") return { kind, attackType: "kick", duration: 22, activeStart: 7, activeEnd: 13, reach: 40 * p.reach, damage: 12 * p.power, push: 3.8, lift: 2.6, stun: 20, meter: 7, hitsCrouching: true };
+        if (loweredName === "arvid" || loweredName === "oliwer") {
+          return { kind: "special", attackType: loweredName === "arvid" ? "fire" : "ice", duration: 30, activeStart: 99, activeEnd: 98, reach: 0, damage: 0, push: 0, lift: 0, stun: 0, meter: -30, hitsCrouching: true };
+        }
+        return { kind: "special", attackType: "kick", duration: 28, activeStart: 10, activeEnd: 18, reach: 51 * p.reach, damage: 18 * p.power, push: 4.9, lift: 3.1, stun: 24, meter: -30, hitsCrouching: true };
       },
       triggerAttack(fighter, kind) {
-        if (!fighter || fighter.stun > 0 || fighter.cooldown > 0 || fighter.attackTimer > 0) return;
+        if (!fighter || fighter.hp <= 0 || fighter.stun > 0 || fighter.cooldown > 0 || fighter.attackTimer > 0) return;
         if (kind === "special" && fighter.specialMeter < 30) return;
         const atk = this.attackData(fighter, kind);
         fighter.attackKind = atk.kind;
@@ -6748,14 +7279,16 @@
         fighter.attackHit = false;
         fighter.cooldown = kind === "light" ? 10 : (kind === "heavy" ? 15 : 26);
         fighter.specialMeter = clamp(fighter.specialMeter + atk.meter, 0, 100);
+        if (kind === "special") this.spawnElementSpecial(fighter);
       },
       processHit(attacker, defender) {
-        if (!attacker || !defender || attacker.attackTimer <= 0 || attacker.attackHit) return;
+        if (!attacker || !defender || defender.hp <= 0 || attacker.attackTimer <= 0 || attacker.attackHit) return;
         const atk = this.attackData(attacker, attacker.attackKind || "light");
         const progress = atk.duration - attacker.attackTimer;
         if (progress < atk.activeStart || progress > atk.activeEnd) return;
         const distance = Math.abs(attacker.x - defender.x);
         if (distance > atk.reach || Math.abs(attacker.y - defender.y) > 28) return;
+        if (defender.crouch && defender.onGround && !atk.hitsCrouching) return;
 
         const blocking = defender.block && defender.facing !== attacker.facing && defender.onGround;
         const dmg = blocking ? atk.damage * 0.32 : atk.damage / defender.profile.defense;
@@ -6770,6 +7303,177 @@
         this.cameraShake = Math.max(this.cameraShake, blocking ? 2 : 5);
         this.impactFlash = Math.max(this.impactFlash, blocking ? 0.2 : 0.35);
         this.spawnImpact((attacker.x + defender.x) * 0.5, 196 - Math.max(attacker.y, defender.y) - 28, blocking ? "#94d2ff" : "#ffd166");
+      },
+      processHitGroup(attacker, defenders) {
+        if (!attacker || !defenders) return;
+        for (const defender of defenders) {
+          const before = attacker.attackHit;
+          this.processHit(attacker, defender);
+          if (!before && attacker.attackHit) break;
+        }
+      },
+      projectileTeamFor(fighter) {
+        if (this.state === "coop-fight") return fighter === this.player || fighter === this.enemy ? "hero" : "npc";
+        return fighter === this.player ? "hero" : "npc";
+      },
+      spawnElementSpecial(fighter) {
+        if (!fighter || fighter.hp <= 0) return;
+        const name = String(fighter.profile.name || "").toLowerCase();
+        const team = this.projectileTeamFor(fighter);
+        const dir = fighter.facing || 1;
+        const ox = fighter.x + dir * 26;
+        const oy = fighter.y + (fighter.crouch ? 12 : 19);
+        if (name === "arvid") {
+          this.projectiles.push({
+            type: "fire",
+            x: ox,
+            y: oy,
+            vx: dir * 4.9,
+            vy: 0.12,
+            gravity: -0.013,
+            radius: 7.5,
+            life: 92,
+            team,
+            damage: 15 * fighter.profile.power,
+            push: 4.4,
+            lift: 2.2,
+            stun: 18,
+            trail: []
+          });
+          return;
+        }
+        if (name === "oliwer") {
+          const spreads = [-0.22, 0, 0.22];
+          for (const s of spreads) {
+            this.projectiles.push({
+              type: "ice",
+              x: ox,
+              y: oy - 1,
+              vx: dir * (4.1 + Math.abs(s) * 0.7),
+              vy: 0.5 + s * 1.1,
+              gravity: -0.05,
+              radius: 5.2,
+              life: 76,
+              team,
+              damage: 8 * fighter.profile.power,
+              push: 3.1,
+              lift: 1.6,
+              stun: 12,
+              trail: []
+            });
+          }
+        }
+      },
+      projectileTargets(proj) {
+        if (this.state === "fight") {
+          return proj.team === "hero" ? [this.enemy] : [this.player];
+        }
+        if (this.state !== "coop-fight") return [];
+        const heroes = this.onlineCoop
+          ? [this.player, this.enemy].filter((f) => f && f.hp > 0)
+          : [this.player].filter((f) => f && f.hp > 0);
+        return proj.team === "hero" ? this.coopEnemies : heroes;
+      },
+      updateProjectiles(dtScale) {
+        if (!this.projectiles.length) return;
+        for (const proj of this.projectiles) {
+          proj.life -= dtScale;
+          if (proj.life <= 0) continue;
+          proj.x += proj.vx * dtScale;
+          proj.y += proj.vy * dtScale;
+          proj.vy += (proj.gravity || 0) * dtScale;
+          if (!Array.isArray(proj.trail)) proj.trail = [];
+          proj.trail.push({ x: proj.x, y: proj.y });
+          if (proj.trail.length > 5) proj.trail.shift();
+
+          if (proj.x < 32 || proj.x > 448 || proj.y < -20 || proj.y > 120) {
+            proj.life = 0;
+            continue;
+          }
+
+          const targets = this.projectileTargets(proj);
+          const dir = proj.vx >= 0 ? 1 : -1;
+          for (const t of targets) {
+            if (!t || t.hp <= 0) continue;
+            const dx = Math.abs(proj.x - t.x);
+            const dy = Math.abs((proj.y + 4) - t.y);
+            if (dx > proj.radius + 16 || dy > 24) continue;
+
+            const blocking = t.block && t.onGround && t.facing !== dir;
+            const damage = blocking ? proj.damage * 0.34 : proj.damage / t.profile.defense;
+            t.hp = Math.max(0, t.hp - damage);
+            t.stun = Math.max(t.stun, blocking ? proj.stun * 0.45 : proj.stun);
+            t.vx += dir * proj.push * (blocking ? 0.32 : 1);
+            t.vy += proj.lift * (blocking ? 0.45 : 1);
+            this.cameraShake = Math.max(this.cameraShake, blocking ? 2 : 4.5);
+            this.impactFlash = Math.max(this.impactFlash, blocking ? 0.14 : 0.26);
+            this.spawnImpact(proj.x, 196 - Math.max(0, proj.y) - 20, blocking ? "#94d2ff" : (proj.type === "fire" ? "#ff9f43" : "#9bd4ff"));
+            proj.life = 0;
+            break;
+          }
+        }
+        this.projectiles = this.projectiles.filter((p) => p.life > 0);
+      },
+      nearest(from, list) {
+        let best = null;
+        let bestDist = Infinity;
+        for (const item of list) {
+          if (!item || item.hp <= 0) continue;
+          const dist = Math.abs(from.x - item.x);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = item;
+          }
+        }
+        return best;
+      },
+      updateHuman(fighter, opponent, input, dtScale) {
+        if (!fighter || fighter.hp <= 0) return;
+        fighter.moveDir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        fighter.block = !!input.block;
+        fighter.crouch = !!input.crouch;
+        fighter.jumpQueued = !!input.jump;
+        if (fighter.lastLight !== (input.light || 0)) {
+          fighter.lastLight = input.light || 0;
+          this.triggerAttack(fighter, "light");
+        }
+        if (fighter.lastHeavy !== (input.heavy || 0)) {
+          fighter.lastHeavy = input.heavy || 0;
+          this.triggerAttack(fighter, "heavy");
+        }
+        if (fighter.lastSpecial !== (input.special || 0)) {
+          fighter.lastSpecial = input.special || 0;
+          this.triggerAttack(fighter, "special");
+        }
+        this.updateFighterState(fighter, opponent, dtScale);
+      },
+      updateCoopAI(fighter, foes, dtScale) {
+        if (!fighter || fighter.hp <= 0) return;
+        const target = this.nearest(fighter, foes);
+        if (!target) return;
+        const dist = target.x - fighter.x;
+        const absDist = Math.abs(dist);
+        fighter.moveDir = 0;
+        fighter.block = false;
+        fighter.crouch = false;
+        fighter.jumpQueued = false;
+        if (
+          fighter.onGround &&
+          target.attackTimer > 0 &&
+          target.attackKind === "light" &&
+          absDist < 66 &&
+          Math.random() < 0.14 * dtScale
+        ) fighter.crouch = true;
+        if (target.attackTimer > 0 && Math.random() < 0.16 * dtScale) fighter.block = true;
+        if (absDist > 56) fighter.moveDir = dist > 0 ? 1 : -1;
+        else if (absDist < 28) fighter.moveDir = dist > 0 ? -1 : 1;
+        if (fighter.cooldown <= 0 && fighter.attackTimer <= 0 && absDist < 70 && Math.random() < 0.12 * dtScale) {
+          const roll = Math.random();
+          if (roll < 0.5) this.triggerAttack(fighter, "light");
+          else if (roll < 0.82) this.triggerAttack(fighter, "heavy");
+          else this.triggerAttack(fighter, "special");
+        }
+        this.updateFighterState(fighter, target, dtScale);
       },
       spawnImpact(x, y, color) {
         for (let i = 0; i < 16; i += 1) {
@@ -6798,8 +7502,9 @@
       },
       updateFighterState(fighter, opponent, dtScale) {
         if (!fighter || !opponent) return;
-        const moveAccel = fighter.profile.speed * 0.56 * dtScale;
-        const maxRun = fighter.profile.speed * 2.75;
+        const crouching = fighter.crouch && fighter.onGround;
+        const moveAccel = fighter.profile.speed * (crouching ? 0.26 : 0.56) * dtScale;
+        const maxRun = fighter.profile.speed * (crouching ? 1.12 : 2.75);
         const friction = fighter.onGround ? Math.pow(0.82, dtScale) : Math.pow(0.94, dtScale);
 
         fighter.facing = opponent.x >= fighter.x ? 1 : -1;
@@ -6816,7 +7521,7 @@
         if (fighter.stun <= 0) {
           fighter.vx += fighter.moveDir * moveAccel;
           fighter.vx = clamp(fighter.vx, -maxRun, maxRun);
-          if (fighter.onGround && fighter.jumpQueued) {
+          if (!crouching && fighter.onGround && fighter.jumpQueued) {
             fighter.vy = fighter.profile.jump;
             fighter.onGround = false;
           }
@@ -6834,6 +7539,7 @@
         } else {
           fighter.onGround = false;
         }
+        if (!fighter.onGround) fighter.crouch = false;
 
         fighter.vx *= friction;
         fighter.x = clamp(fighter.x, 52, 428);
@@ -6842,6 +7548,7 @@
         if (!this.player) return;
         this.player.moveDir = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
         this.player.block = this.keys.block;
+        this.player.crouch = this.keys.crouch;
         this.player.jumpQueued = this.keys.jump;
         this.updateFighterState(this.player, this.enemy, dtScale);
       },
@@ -6854,15 +7561,17 @@
 
         ai.moveDir = 0;
         ai.block = false;
+        ai.crouch = false;
         ai.jumpQueued = false;
 
         this.aiTimer -= dtScale;
         if (this.aiTimer <= 0) {
           this.aiTimer = 6 + Math.random() * 10;
           if (human.attackTimer > 0 && Math.random() < 0.45) ai.block = true;
+          if (human.attackKind === "light" && absDist < 62 && Math.random() < 0.28) ai.crouch = true;
           if (absDist > 62) ai.moveDir = dist > 0 ? 1 : -1;
           else if (absDist < 34) ai.moveDir = dist > 0 ? -1 : 1;
-          if (ai.onGround && Math.random() < 0.08) ai.jumpQueued = true;
+          if (!ai.crouch && ai.onGround && Math.random() < 0.08) ai.jumpQueued = true;
         }
 
         if (ai.cooldown <= 0 && ai.attackTimer <= 0 && absDist < 66 && Math.random() < 0.16 * dtScale) {
@@ -6901,191 +7610,681 @@
           }
         }
       },
+      updateCoopRound(dtScale) {
+        const aliveTeam = this.onlineCoop
+          ? [this.player, this.enemy].filter((f) => f && f.hp > 0)
+          : [this.player].filter((f) => f && f.hp > 0);
+        if (!aliveTeam.length) {
+          this.state = "coop-over";
+          this.winnerText = "Teamet blev utslaget";
+          return;
+        }
+        if (this.coopEnemies.length === 0) {
+          if (this.coopWave >= this.coopMaxWaves) {
+            this.state = "coop-over";
+            this.winnerText = "Ni klarade alla vagor";
+            return;
+          }
+          if (this.coopClearTimer <= 0) this.coopClearTimer = 92;
+          this.coopClearTimer -= dtScale;
+          if (this.coopClearTimer <= 0) this.startCoopWave(this.coopWave + 1);
+        }
+      },
       nextRound() {
         this.round += 1;
-        this.enemyIndex = this.randomEnemyIndex();
+        if (!this.onlineVs) this.enemyIndex = this.randomEnemyIndex([this.selectedIndex]);
         this.startRound();
       },
       onClick() {
-        if (this.state === "select") {
-          this.startMatch();
+        if (this.state === "entry") {
+          this.state = this.rootMode === 0 ? "select-solo" : "select-multi";
+          this.selectedRow = 0;
           return;
         }
-        if (this.state === "round-over") {
+        if (this.state === "select-solo" || this.state === "select-multi") {
+          this.startFromSelect();
+          return;
+        }
+        if (this.state === "round-over" && this.net.role !== "guest") {
           this.nextRound();
           return;
         }
-        if (this.state === "match-over") {
+        if ((this.state === "match-over" || this.state === "coop-over") && this.net.role !== "guest") {
           this.init();
           return;
         }
-        if (this.state === "fight") this.triggerAttack(this.player, "light");
+        if (this.state === "fight" || this.state === "coop-fight") this.pulses.light += 1;
       },
       onKeyDown(code, repeat = false) {
-        if (this.state === "select") {
+        if (this.state === "entry") {
+          if (!repeat && (code === "ArrowLeft" || code === "KeyA")) this.rootMode = (this.rootMode - 1 + this.rootModes.length) % this.rootModes.length;
+          if (!repeat && (code === "ArrowRight" || code === "KeyD")) this.rootMode = (this.rootMode + 1) % this.rootModes.length;
+          if (code === "Enter" || code === "Space") {
+            this.state = this.rootMode === 0 ? "select-solo" : "select-multi";
+            this.selectedRow = 0;
+          }
+          return;
+        }
+
+        if (this.state === "select-solo" || this.state === "select-multi") {
+          const solo = this.state === "select-solo";
+          const modeRow = solo ? 1 : 2;
+          const hasWaveRow = this.playMode === 1;
+          const waveRow = hasWaveRow ? modeRow + 1 : -1;
+          const mapRow = hasWaveRow ? modeRow + 2 : modeRow + 1;
+          const maxRow = mapRow;
+          if (!repeat && (code === "ArrowUp" || code === "KeyW")) this.selectedRow = clamp(this.selectedRow - 1, 0, maxRow);
+          if (!repeat && (code === "ArrowDown" || code === "KeyS")) this.selectedRow = clamp(this.selectedRow + 1, 0, maxRow);
           if (!repeat && (code === "ArrowLeft" || code === "KeyA")) {
-            this.selectedIndex = (this.selectedIndex - 1 + this.roster.length) % this.roster.length;
+            if (this.selectedRow === 0) this.selectedIndex = (this.selectedIndex - 1 + this.roster.length) % this.roster.length;
+            else if (!solo && this.selectedRow === 1) this.netMode = (this.netMode - 1 + this.netModes.length) % this.netModes.length;
+            else if (this.selectedRow === modeRow) {
+              this.playMode = (this.playMode - 1 + this.playModes.length) % this.playModes.length;
+            } else if (this.selectedRow === waveRow) {
+              this.waveOptionIndex = (this.waveOptionIndex - 1 + this.waveOptions.length) % this.waveOptions.length;
+            } else if (this.selectedRow === mapRow) {
+              this.mapIndex = (this.mapIndex - 1 + this.maps.length) % this.maps.length;
+            }
+            const postHasWaveRow = this.playMode === 1;
+            const postMapRow = postHasWaveRow ? modeRow + 2 : modeRow + 1;
+            this.selectedRow = clamp(this.selectedRow, 0, postMapRow);
           }
           if (!repeat && (code === "ArrowRight" || code === "KeyD")) {
-            this.selectedIndex = (this.selectedIndex + 1) % this.roster.length;
+            if (this.selectedRow === 0) this.selectedIndex = (this.selectedIndex + 1) % this.roster.length;
+            else if (!solo && this.selectedRow === 1) this.netMode = (this.netMode + 1) % this.netModes.length;
+            else if (this.selectedRow === modeRow) {
+              this.playMode = (this.playMode + 1) % this.playModes.length;
+            } else if (this.selectedRow === waveRow) {
+              this.waveOptionIndex = (this.waveOptionIndex + 1) % this.waveOptions.length;
+            } else if (this.selectedRow === mapRow) {
+              this.mapIndex = (this.mapIndex + 1) % this.maps.length;
+            }
+            const postHasWaveRow = this.playMode === 1;
+            const postMapRow = postHasWaveRow ? modeRow + 2 : modeRow + 1;
+            this.selectedRow = clamp(this.selectedRow, 0, postMapRow);
           }
-          if (!repeat && code === "Digit1") this.selectedIndex = 0;
-          if (!repeat && code === "Digit2") this.selectedIndex = 1;
-          if (!repeat && code === "Digit3") this.selectedIndex = 2;
-          if (!repeat && code === "Digit4") this.selectedIndex = 3;
-          if (!repeat && code === "Digit5") this.selectedIndex = 4;
-          if (code === "Enter" || code === "Space") this.startMatch();
+          if (!repeat && code.startsWith("Digit")) {
+            const pick = Number(code.slice(5));
+            if (Number.isFinite(pick) && pick >= 1 && pick <= this.roster.length) this.selectedIndex = pick - 1;
+          }
+          if (!repeat && code === "Escape") {
+            this.state = "entry";
+            this.selectedRow = 0;
+            return;
+          }
+          if (code === "Enter" || code === "Space") this.startFromSelect();
+          return;
+        }
+
+        if (["lobby-host", "lobby-join", "guest-wait"].includes(this.state)) {
+          if (!repeat && (code === "Escape" || code === "Backspace")) this.init();
           return;
         }
 
         if (this.state === "round-over") {
-          if (code === "Enter" || code === "Space") this.nextRound();
+          if (this.net.role !== "guest" && (code === "Enter" || code === "Space")) this.nextRound();
           return;
         }
 
-        if (this.state === "match-over") {
-          if (code === "Enter" || code === "Space") this.init();
+        if (this.state === "match-over" || this.state === "coop-over") {
+          if (this.net.role !== "guest" && (code === "Enter" || code === "Space")) this.init();
           return;
         }
 
-        if (this.state !== "fight") return;
+        if (this.state !== "fight" && this.state !== "coop-fight") return;
         if (code === "ArrowLeft" || code === "KeyA") this.keys.left = true;
         if (code === "ArrowRight" || code === "KeyD") this.keys.right = true;
         if (code === "ArrowUp" || code === "KeyW" || code === "Space") this.keys.jump = true;
+        if (code === "ArrowDown" || code === "KeyS") this.keys.crouch = true;
         if (code === "KeyQ") this.keys.block = true;
-        if (code === "KeyF") this.triggerAttack(this.player, "light");
-        if (code === "KeyG") this.triggerAttack(this.player, "heavy");
-        if (code === "KeyH") this.triggerAttack(this.player, "special");
+        if (!repeat && code === "KeyF") this.pulses.light += 1;
+        if (!repeat && code === "KeyG") this.pulses.heavy += 1;
+        if (!repeat && code === "KeyH") this.pulses.special += 1;
       },
       onKeyUp(code) {
         if (code === "ArrowLeft" || code === "KeyA") this.keys.left = false;
         if (code === "ArrowRight" || code === "KeyD") this.keys.right = false;
         if (code === "ArrowUp" || code === "KeyW" || code === "Space") this.keys.jump = false;
+        if (code === "ArrowDown" || code === "KeyS") this.keys.crouch = false;
         if (code === "KeyQ") this.keys.block = false;
+      },
+      pack(f) {
+        if (!f) return null;
+        return {
+          i: clamp(this.roster.indexOf(f.profile), 0, this.roster.length - 1),
+          p: f.profile,
+          side: f.side,
+          x: f.x, y: f.y, vx: f.vx, vy: f.vy, facing: f.facing,
+          hp: f.hp, maxHp: f.maxHp, moveDir: f.moveDir, onGround: f.onGround, block: f.block, crouch: f.crouch,
+          attackKind: f.attackKind, attackTimer: f.attackTimer, attackHit: f.attackHit,
+          cooldown: f.cooldown, stun: f.stun, combo: f.combo, comboTimer: f.comboTimer, specialMeter: f.specialMeter,
+          renderScale: f.renderScale,
+          isBoss: f.isBoss
+        };
+      },
+      unpack(d) {
+        if (!d) return null;
+        const profile = d.p || this.roster[clamp(Number(d.i) || 0, 0, this.roster.length - 1)];
+        const fighter = this.createFighter(profile, d.side || "left");
+        fighter.x = Number(d.x) || fighter.x;
+        fighter.y = Number(d.y) || 0;
+        fighter.vx = Number(d.vx) || 0;
+        fighter.vy = Number(d.vy) || 0;
+        fighter.facing = Number(d.facing) || fighter.facing;
+        fighter.hp = Number(d.hp) || 0;
+        fighter.maxHp = Number(d.maxHp) || fighter.maxHp;
+        fighter.moveDir = Number(d.moveDir) || 0;
+        fighter.onGround = !!d.onGround;
+        fighter.block = !!d.block;
+        fighter.crouch = !!d.crouch;
+        fighter.attackKind = d.attackKind || "";
+        fighter.attackTimer = Number(d.attackTimer) || 0;
+        fighter.attackHit = !!d.attackHit;
+        fighter.cooldown = Number(d.cooldown) || 0;
+        fighter.stun = Number(d.stun) || 0;
+        fighter.combo = Number(d.combo) || 0;
+        fighter.comboTimer = Number(d.comboTimer) || 0;
+        fighter.specialMeter = Number(d.specialMeter) || 0;
+        fighter.renderScale = Number(d.renderScale) || 1;
+        fighter.isBoss = !!d.isBoss;
+        return fighter;
+      },
+      makeSnapshot() {
+        return {
+          state: this.state,
+          selectedIndex: this.selectedIndex,
+          enemyIndex: this.enemyIndex,
+          mapIndex: this.mapIndex,
+          playMode: this.playMode,
+          onlineVs: this.onlineVs,
+          onlineCoop: this.onlineCoop,
+          round: this.round,
+          playerWins: this.playerWins,
+          enemyWins: this.enemyWins,
+          timer: this.timer,
+          winnerText: this.winnerText,
+          impactFlash: this.impactFlash,
+          cameraShake: this.cameraShake,
+          coopWave: this.coopWave,
+          coopMaxWaves: this.coopMaxWaves,
+          coopClearTimer: this.coopClearTimer,
+          coopIntroTimer: this.coopIntroTimer,
+          coopIntroTitle: this.coopIntroTitle,
+          coopIntroSub: this.coopIntroSub,
+          projectiles: this.projectiles.map((p) => ({
+            type: p.type,
+            x: p.x,
+            y: p.y,
+            vx: p.vx,
+            vy: p.vy,
+            gravity: p.gravity,
+            radius: p.radius,
+            life: p.life,
+            team: p.team,
+            damage: p.damage,
+            push: p.push,
+            lift: p.lift,
+            stun: p.stun,
+            trail: Array.isArray(p.trail) ? p.trail.slice(-5) : []
+          })),
+          player: this.pack(this.player),
+          enemy: this.pack(this.enemy),
+          coopEnemies: this.coopEnemies.map((e) => this.pack(e))
+        };
+      },
+      applySnapshot(snapshot) {
+        if (!snapshot) return;
+        this.state = snapshot.state || this.state;
+        this.selectedIndex = clamp(Number(snapshot.selectedIndex) || this.selectedIndex, 0, this.roster.length - 1);
+        this.enemyIndex = clamp(Number(snapshot.enemyIndex) || this.enemyIndex, 0, this.roster.length - 1);
+        this.mapIndex = clamp(Number(snapshot.mapIndex) || this.mapIndex, 0, this.maps.length - 1);
+        this.playMode = clamp(Number(snapshot.playMode) || this.playMode, 0, this.playModes.length - 1);
+        this.onlineVs = !!snapshot.onlineVs;
+        this.onlineCoop = !!snapshot.onlineCoop;
+        this.round = Number(snapshot.round) || 1;
+        this.playerWins = Number(snapshot.playerWins) || 0;
+        this.enemyWins = Number(snapshot.enemyWins) || 0;
+        this.timer = Number(snapshot.timer) || 0;
+        this.winnerText = snapshot.winnerText || "";
+        this.impactFlash = Number(snapshot.impactFlash) || 0;
+        this.cameraShake = Number(snapshot.cameraShake) || 0;
+        this.coopWave = Number(snapshot.coopWave) || 1;
+        this.coopMaxWaves = Number(snapshot.coopMaxWaves) || 10;
+        this.coopClearTimer = Number(snapshot.coopClearTimer) || 0;
+        this.coopIntroTimer = Number(snapshot.coopIntroTimer) || 0;
+        this.coopIntroTitle = snapshot.coopIntroTitle || "";
+        this.coopIntroSub = snapshot.coopIntroSub || "";
+        this.projectiles = Array.isArray(snapshot.projectiles)
+          ? snapshot.projectiles.map((p) => ({
+              type: p.type || "fire",
+              x: Number(p.x) || 0,
+              y: Number(p.y) || 0,
+              vx: Number(p.vx) || 0,
+              vy: Number(p.vy) || 0,
+              gravity: Number(p.gravity) || 0,
+              radius: Number(p.radius) || 6,
+              life: Number(p.life) || 0,
+              team: p.team || "npc",
+              damage: Number(p.damage) || 0,
+              push: Number(p.push) || 0,
+              lift: Number(p.lift) || 0,
+              stun: Number(p.stun) || 0,
+              trail: Array.isArray(p.trail) ? p.trail.slice(-5) : []
+            })).filter((p) => p.life > 0)
+          : [];
+        this.player = this.unpack(snapshot.player);
+        this.enemy = this.unpack(snapshot.enemy);
+        this.coopEnemies = Array.isArray(snapshot.coopEnemies) ? snapshot.coopEnemies.map((e) => this.unpack(e)).filter(Boolean) : [];
+      },
+      updateNet(dtScale) {
+        if (this.net.role === "guest") {
+          if (!this.net.connected && this.state === "lobby-join") {
+            this.net.joinTimer += dtScale;
+            if (this.net.joinTimer >= 60) {
+              this.net.joinTimer = 0;
+              this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
+            }
+          }
+          if (this.net.connected && ["guest-wait", "fight", "coop-fight", "round-over", "match-over", "coop-over"].includes(this.state)) {
+            this.net.sendTimer += dtScale;
+            if (this.net.sendTimer >= 1) {
+              this.net.sendTimer = 0;
+              this.sendNet({ t: "input", i: this.collectInput() });
+            }
+          }
+          return;
+        }
+        if (this.net.role === "host" && this.net.connected && ["fight", "coop-fight", "round-over", "match-over", "coop-over"].includes(this.state)) {
+          this.net.snapTimer += dtScale;
+          if (this.net.snapTimer >= 1.4) {
+            this.net.snapTimer = 0;
+            this.sendNet({ t: "snap", s: this.makeSnapshot() });
+          }
+        }
       },
       update(dtScale) {
         this.impactFlash = Math.max(0, this.impactFlash - 0.05 * dtScale);
         this.cameraShake = Math.max(0, this.cameraShake - 0.25 * dtScale);
+        this.coopIntroTimer = Math.max(0, this.coopIntroTimer - dtScale);
         this.updateParticles(dtScale);
+        this.updateNet(dtScale);
 
-        if (this.state !== "fight") return;
+        if (this.net.role === "guest") return;
 
-        this.updatePlayer(dtScale);
-        this.updateEnemyAI(dtScale);
-        this.processHit(this.player, this.enemy);
-        this.processHit(this.enemy, this.player);
-        this.updateRound(dtScale);
+        if (this.state === "fight") {
+          this.updateHuman(this.player, this.enemy, this.collectInput(), dtScale);
+          if (this.onlineVs && this.net.connected) this.updateHuman(this.enemy, this.player, this.net.remoteInput || this.emptyInput(), dtScale);
+          else this.updateEnemyAI(dtScale);
+          this.processHit(this.player, this.enemy);
+          this.processHit(this.enemy, this.player);
+          this.updateProjectiles(dtScale);
+          this.updateRound(dtScale);
+          return;
+        }
+
+        if (this.state !== "coop-fight") return;
+        const localInput = this.collectInput();
+        const fallbackOpponent = this.enemy || this.player;
+        const targetP = this.nearest(this.player, this.coopEnemies) || fallbackOpponent;
+        this.updateHuman(this.player, targetP, localInput, dtScale);
+        if (this.onlineCoop && this.net.connected && this.enemy) {
+          const targetE = this.nearest(this.enemy, this.coopEnemies) || this.player;
+          this.updateHuman(this.enemy, targetE, this.net.remoteInput || this.emptyInput(), dtScale);
+        } else if (this.enemy) {
+          this.updateCoopAI(this.enemy, this.coopEnemies, dtScale);
+        }
+
+        const heroes = this.onlineCoop
+          ? [this.player, this.enemy].filter((f) => f && f.hp > 0)
+          : [this.player].filter((f) => f && f.hp > 0);
+        for (const npc of this.coopEnemies) this.updateCoopAI(npc, heroes, dtScale);
+        this.processHitGroup(this.player, this.coopEnemies);
+        if (this.enemy) this.processHitGroup(this.enemy, this.coopEnemies);
+        for (const npc of this.coopEnemies) this.processHitGroup(npc, heroes);
+        this.updateProjectiles(dtScale);
+        this.coopEnemies = this.coopEnemies.filter((n) => n.hp > 0);
+        this.updateCoopRound(dtScale);
       },
       drawBackground() {
+        const mapId = this.currentMap().id;
+        if (mapId === "roof") {
+          const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          g.addColorStop(0, "#1a214f");
+          g.addColorStop(1, "#1d2f45");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#d6e4ff";
+          for (let i = 0; i < 60; i += 1) ctx.fillRect((i * 67) % canvas.width, (i * 37) % 108, 2, 2);
+          ctx.fillStyle = "#3b4b65";
+          ctx.fillRect(0, 146, canvas.width, canvas.height - 146);
+          return;
+        }
+        if (mapId === "ring") {
+          const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          g.addColorStop(0, "#54243a");
+          g.addColorStop(1, "#17141f");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#6a748d";
+          ctx.fillRect(44, 120, canvas.width - 88, 102);
+          ctx.fillStyle = "#2f3a4f";
+          ctx.fillRect(52, 128, canvas.width - 104, 88);
+          return;
+        }
+        if (mapId === "dojo") {
+          const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          g.addColorStop(0, "#c8a87a");
+          g.addColorStop(1, "#6d4c38");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#4e3425";
+          ctx.fillRect(0, 148, canvas.width, canvas.height - 148);
+          return;
+        }
         const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
         sky.addColorStop(0, "#4a5b77");
         sky.addColorStop(0.5, "#343f56");
         sky.addColorStop(1, "#1f2736");
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const t = performance.now() * 0.00006;
-        for (let i = 0; i < 24; i += 1) {
-          const x = ((i * 87 + t * 160) % (canvas.width + 80)) - 40;
-          const w = 34 + ((i * 17) % 42);
-          const h = 74 + ((i * 31) % 94);
-          ctx.fillStyle = i % 2 ? "#293244" : "#222b3b";
-          ctx.fillRect(Math.round(x), 138 - h, w, h);
-          ctx.fillStyle = "rgba(250,220,130,0.15)";
-          for (let y = 138 - h + 8; y < 138; y += 14) {
-            ctx.fillRect(Math.round(x + 5), y, Math.max(2, w - 10), 3);
-          }
-        }
-
         const road = ctx.createLinearGradient(0, 140, 0, canvas.height);
         road.addColorStop(0, "#2f3138");
         road.addColorStop(1, "#1a1b22");
         ctx.fillStyle = road;
         ctx.fillRect(0, 140, canvas.width, canvas.height - 140);
-
-        ctx.strokeStyle = "rgba(255,255,255,0.08)";
-        for (let i = 0; i <= 14; i += 1) {
-          const y = 142 + i * 9;
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(canvas.width, y);
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = "#f58b2f";
-        for (let i = 0; i < canvas.width; i += 56) {
-          ctx.fillRect(i + 8, 196, 28, 4);
-        }
-
         ctx.fillStyle = "rgba(18,24,36,0.9)";
         ctx.fillRect(0, 130, canvas.width, 12);
-        for (let i = 0; i < 80; i += 1) {
-          const x = (i * 19 + 7) % canvas.width;
-          const h = 4 + (i % 3) * 3;
-          ctx.fillRect(x, 130 - h, 3, h);
+      },
+      tintColor(hex, factor) {
+        const src = String(hex || "#808080").replace("#", "");
+        const full = src.length === 3
+          ? `${src[0]}${src[0]}${src[1]}${src[1]}${src[2]}${src[2]}`
+          : src.padEnd(6, "0").slice(0, 6);
+        const r = clamp(Math.round(parseInt(full.slice(0, 2), 16) * factor), 0, 255);
+        const g = clamp(Math.round(parseInt(full.slice(2, 4), 16) * factor), 0, 255);
+        const b = clamp(Math.round(parseInt(full.slice(4, 6), 16) * factor), 0, 255);
+        return `rgb(${r},${g},${b})`;
+      },
+      drawVoxelBox(x, yBottom, w, h, depth, color, sideDir = 1) {
+        const hw = w * 0.5;
+        const left = x - hw;
+        const right = x + hw;
+        const top = yBottom - h;
+        const dx = depth * 0.72 * (sideDir >= 0 ? 1 : -1);
+        const dy = -depth * 0.42;
+
+        ctx.fillStyle = this.tintColor(color, 1.18);
+        ctx.beginPath();
+        ctx.moveTo(left, top);
+        ctx.lineTo(right, top);
+        ctx.lineTo(right + dx, top + dy);
+        ctx.lineTo(left + dx, top + dy);
+        ctx.closePath();
+        ctx.fill();
+
+        if (sideDir >= 0) {
+          ctx.fillStyle = this.tintColor(color, 0.78);
+          ctx.beginPath();
+          ctx.moveTo(right, top);
+          ctx.lineTo(right, yBottom);
+          ctx.lineTo(right + dx, yBottom + dy);
+          ctx.lineTo(right + dx, top + dy);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillStyle = this.tintColor(color, 0.78);
+          ctx.beginPath();
+          ctx.moveTo(left, top);
+          ctx.lineTo(left + dx, top + dy);
+          ctx.lineTo(left + dx, yBottom + dy);
+          ctx.lineTo(left, yBottom);
+          ctx.closePath();
+          ctx.fill();
         }
+
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(left), Math.round(top), Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+      },
+      drawArcadeCapsule(x, y, len, radius, angle, color) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        const half = len * 0.5;
+        const r = Math.max(1, radius);
+        const top = -half + r;
+        const bottom = half - r;
+
+        const path = () => {
+          ctx.beginPath();
+          ctx.moveTo(-r, top);
+          ctx.lineTo(-r, bottom);
+          ctx.arc(0, bottom, r, Math.PI, 0, false);
+          ctx.lineTo(r, top);
+          ctx.arc(0, top, r, 0, Math.PI, false);
+          ctx.closePath();
+        };
+
+        const grad = ctx.createLinearGradient(0, -half, 0, half);
+        grad.addColorStop(0, this.tintColor(color, 1.2));
+        grad.addColorStop(0.58, color);
+        grad.addColorStop(1, this.tintColor(color, 0.72));
+        path();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(10,14,30,0.9)";
+        ctx.lineWidth = Math.max(1, r * 0.24);
+        path();
+        ctx.stroke();
+
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = this.tintColor(color, 1.35);
+        ctx.fillRect(-r * 0.58, -half * 0.36, r * 0.44, half * 0.7);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      },
+      drawArcadeTorso(x, y, w, h, cMain, cAlt, facing = 1, crouch = 0) {
+        const shoulder = w * (0.64 - crouch * 0.06);
+        const waist = w * (0.42 + crouch * 0.05);
+        const top = y - h * 0.5;
+        const bottom = y + h * 0.5;
+        const skew = facing * w * 0.14;
+
+        const path = (inflate = 0) => {
+          const sh = shoulder + inflate;
+          const ws = waist + inflate * 0.66;
+          ctx.beginPath();
+          ctx.moveTo(x - sh + skew * 0.2, top - inflate * 0.4);
+          ctx.lineTo(x + sh + skew, top - inflate * 0.4);
+          ctx.lineTo(x + ws + skew * 0.3, bottom + inflate * 0.35);
+          ctx.lineTo(x - ws - skew * 0.1, bottom + inflate * 0.35);
+          ctx.closePath();
+        };
+
+        const grad = ctx.createLinearGradient(x, top, x, bottom);
+        grad.addColorStop(0, this.tintColor(cMain, 1.15));
+        grad.addColorStop(0.55, cMain);
+        grad.addColorStop(1, this.tintColor(cMain, 0.72));
+
+        path(2.4);
+        ctx.fillStyle = this.tintColor(cAlt, 0.74);
+        ctx.fill();
+        path();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(8,12,24,0.92)";
+        ctx.lineWidth = 2;
+        path();
+        ctx.stroke();
+
+        ctx.fillStyle = this.tintColor(cAlt, 1.15);
+        ctx.fillRect(Math.round(x - w * 0.18), Math.round(y - h * 0.06), Math.round(w * 0.36), Math.round(h * 0.12));
+      },
+      drawArcadeHead(x, y, r, skin, hair, facing = 1, blink = 0) {
+        const grad = ctx.createRadialGradient(
+          x - facing * r * 0.2,
+          y - r * 0.32,
+          r * 0.15,
+          x,
+          y,
+          r * 1.2
+        );
+        grad.addColorStop(0, this.tintColor(skin, 1.2));
+        grad.addColorStop(1, this.tintColor(skin, 0.76));
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = hair;
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.16, r * 1.04, Math.PI * 1.02, Math.PI * -0.02, false);
+        ctx.lineTo(x + r * 0.68, y - r * 0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(10,14,30,0.95)";
+        ctx.lineWidth = Math.max(1, r * 0.15);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const eyeY = y - r * 0.08;
+        ctx.fillStyle = "#f3f7ff";
+        const eyeH = Math.max(1, r * (0.18 - blink * 0.12));
+        ctx.fillRect(Math.round(x - facing * r * 0.36), Math.round(eyeY), Math.round(r * 0.28), Math.round(eyeH));
+        ctx.fillRect(Math.round(x + facing * r * 0.08), Math.round(eyeY), Math.round(r * 0.28), Math.round(eyeH));
       },
       drawFighter(fighter) {
         if (!fighter) return;
         const x = fighter.x + (Math.random() - 0.5) * this.cameraShake;
         const groundY = 206 - fighter.y + (Math.random() - 0.5) * this.cameraShake;
-        const dir = fighter.facing;
-        const c1 = fighter.profile.c1;
-        const c2 = fighter.profile.c2;
+        const dir = fighter.facing >= 0 ? 1 : -1;
+        const scale = fighter.renderScale || 1;
+        const crouch = fighter.crouch && fighter.onGround ? 1 : 0;
+        const time = performance.now() * 0.012 + x * 0.04;
+        const runAmount = clamp(Math.abs(fighter.vx) * 0.5, 0, 1);
+        const stride = Math.sin(time) * runAmount;
+        const bob = Math.cos(time * 2) * 0.8 * runAmount;
 
-        ctx.fillStyle = "rgba(0,0,0,0.35)";
-        ctx.beginPath();
-        ctx.ellipse(x, 212, 18 + Math.abs(fighter.vx) * 2, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        let handReach = 0;
+        let punchU = 0;
+        let kickU = 0;
+        let kickLiftU = 0;
         if (fighter.attackTimer > 0) {
           const atk = this.attackData(fighter, fighter.attackKind || "light");
           const progress = atk.duration - fighter.attackTimer;
           if (progress >= atk.activeStart && progress <= atk.activeEnd) {
-            handReach = (atk.reach - 26) * 0.45;
+            const t = (progress - atk.activeStart) / Math.max(1, atk.activeEnd - atk.activeStart);
+            const pulse = Math.sin(t * Math.PI);
+            if (atk.kind === "light") {
+              punchU = 5 * pulse;
+            } else if (atk.kind === "heavy") {
+              kickU = 6 * pulse;
+              kickLiftU = 3 * pulse;
+            } else {
+              punchU = 3 * pulse;
+              kickU = 8 * pulse;
+              kickLiftU = 4 * pulse;
+            }
           }
         }
 
-        const legSwing = Math.sin(performance.now() * 0.012 + x * 0.05) * Math.min(5, Math.abs(fighter.vx) * 2.2);
-        const bodyW = 24;
-        const bodyH = 34;
-        const headR = 11;
-        const baseY = groundY - bodyH;
+        const u = Math.max(1, Math.round(2 * scale));
+        const rootX = Math.round(x / u) * u;
+        const rootY = Math.round(groundY / u) * u;
+        const outline = "#101322";
+        const cMain = fighter.profile.c1;
+        const cMainDark = this.tintColor(cMain, 0.72);
+        const cMainLight = this.tintColor(cMain, 1.24);
+        const cAlt = fighter.profile.c2;
+        const cAltDark = this.tintColor(cAlt, 0.68);
+        const skin = fighter.profile.skin;
+        const skinDark = this.tintColor(skin, 0.72);
+        const hair = fighter.profile.hair;
+        const eye = "#f2f8ff";
 
-        ctx.fillStyle = c2;
-        ctx.fillRect(Math.round(x - bodyW * 0.5 - 2), Math.round(baseY - 2), bodyW + 4, bodyH + 4);
-        ctx.fillStyle = c1;
-        ctx.fillRect(Math.round(x - bodyW * 0.5), Math.round(baseY), bodyW, bodyH);
+        const px = (xu, yu, wu, hu, color) => {
+          const x0 = dir > 0 ? rootX + Math.round(xu) * u : rootX - Math.round(xu + wu) * u;
+          const y0 = rootY + Math.round(yu) * u;
+          const ww = Math.max(1, Math.round(wu) * u);
+          const hh = Math.max(1, Math.round(hu) * u);
+          ctx.fillStyle = color;
+          ctx.fillRect(x0, y0, ww, hh);
+        };
+        const part = (xu, yu, wu, hu, base, dark, light) => {
+          px(xu - 1, yu - 1, wu + 2, hu + 2, outline);
+          px(xu, yu, wu, hu, base);
+          px(xu, yu, wu, 1, light);
+          px(xu, yu, 1, hu, light);
+          px(xu + wu - 1, yu + 1, 1, hu - 1, dark);
+          px(xu + 1, yu + hu - 1, wu - 1, 1, dark);
+        };
 
-        ctx.fillStyle = fighter.profile.skin;
-        const armY = baseY + 9;
-        ctx.fillRect(Math.round(x - 18 + dir * handReach), Math.round(armY + legSwing * 0.15), 8, 20);
-        ctx.fillRect(Math.round(x + 10 + dir * handReach * 0.5), Math.round(armY - legSwing * 0.15), 8, 20);
+        const legH = crouch ? 9 : 13;
+        const torsoH = crouch ? 9 : 13;
+        const torsoW = crouch ? 10 : 9;
+        const armH = crouch ? 8 : 11;
+        const headW = crouch ? 8 : 9;
+        const headH = crouch ? 7 : 8;
+        const yBob = Math.round(bob);
+        const legY = -legH + yBob;
+        const torsoY = legY - torsoH + 1;
+        const headY = torsoY - headH - 1;
+        const shoulderY = torsoY + 2;
 
-        ctx.fillStyle = c2;
-        ctx.fillRect(Math.round(x - 13), Math.round(groundY - 4), 10, 24);
-        ctx.fillRect(Math.round(x + 3), Math.round(groundY - 4), 10, 24);
-        ctx.fillStyle = c1;
-        ctx.fillRect(Math.round(x - 12), Math.round(groundY - 6 + legSwing * 0.2), 8, 24);
-        ctx.fillRect(Math.round(x + 4), Math.round(groundY - 6 - legSwing * 0.2), 8, 24);
+        const rearLegX = -5 + Math.round(stride * 2);
+        const frontLegX = 1 - Math.round(stride * 2) + Math.round(kickU);
+        const rearArmX = -8 + Math.round(stride * 1.3);
+        const frontArmX = 3 + Math.round(punchU);
+        const frontLegY = legY - Math.round(kickLiftU * 0.9);
+        const frontLegH = Math.max(6, legH - Math.round(kickLiftU * 0.55));
+        const frontArmY = shoulderY - Math.round(punchU * 0.45);
+        const frontArmH = Math.max(5, armH - Math.round(punchU * 0.18));
 
-        ctx.fillStyle = fighter.profile.skin;
-        ctx.beginPath();
-        ctx.arc(x, baseY - headR + 2, headR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = fighter.profile.hair;
-        ctx.beginPath();
-        ctx.arc(x, baseY - headR + 1, headR + 1, Math.PI, 0, false);
-        ctx.fill();
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
 
-        ctx.fillStyle = "#f0f4ff";
-        ctx.fillRect(Math.round(x - 8), Math.round(baseY + 13), 16, 3);
-        if (fighter.block) {
-          ctx.strokeStyle = "#8de0ff";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(Math.round(x - 21), Math.round(baseY + 4), 42, 40);
+        ctx.fillStyle = "rgba(0,0,0,0.36)";
+        ctx.fillRect(rootX - 10 * u, rootY + 1 * u, 20 * u, 2 * u);
+
+        // Legs
+        part(rearLegX, legY, 4, legH, cAlt, cAltDark, this.tintColor(cAlt, 1.14));
+        part(frontLegX, frontLegY, 4, frontLegH, cMain, cMainDark, cMainLight);
+
+        // Torso + chest details
+        part(-4, torsoY, torsoW, torsoH, cMain, cMainDark, cMainLight);
+        part(-4, torsoY - 2, torsoW, 2, cAlt, cAltDark, this.tintColor(cAlt, 1.15));
+        px(-2, torsoY + 4, 5, 1, this.tintColor("#f0f6ff", 0.95));
+
+        // Arms
+        part(rearArmX, shoulderY, 3, armH, skin, skinDark, this.tintColor(skin, 1.18));
+        part(frontArmX, frontArmY, 3, frontArmH, skin, skinDark, this.tintColor(skin, 1.18));
+
+        // Head + face
+        part(-4, headY, headW, headH, skin, skinDark, this.tintColor(skin, 1.18));
+        part(-4, headY - 2, headW, 3, hair, this.tintColor(hair, 0.72), this.tintColor(hair, 1.2));
+        px(-2, headY + 2, 1, 1, eye);
+        px(1, headY + 2, 1, 1, eye);
+        px(-1, headY + 5, 2, 1, this.tintColor(skin, 0.6));
+
+        if (fighter.attackTimer > 0) {
+          ctx.globalAlpha = 0.26;
+          px(6, torsoY + 1, 6 + Math.round(punchU), 1, "#ffe08a");
+          ctx.globalAlpha = 1;
         }
+
+        if (fighter.block) {
+          const bx = dir > 0 ? rootX - 12 * u : rootX - 12 * u;
+          const by = rootY + (torsoY - 2) * u;
+          const bh = (torsoH + 8) * u;
+          ctx.strokeStyle = "#8de0ff";
+          ctx.lineWidth = Math.max(1, u);
+          ctx.strokeRect(bx, by, 24 * u, bh);
+        }
+        ctx.restore();
+
+        if (fighter.crouch && fighter.onGround) drawLabel("DUCK", rootX - 12, rootY + (torsoY - 4) * u, "#9bd4ff");
       },
       drawParticles() {
         for (const p of this.particles) {
@@ -7095,8 +8294,60 @@
         }
         ctx.globalAlpha = 1;
       },
+      drawProjectiles() {
+        if (!this.projectiles.length) return;
+        for (const proj of this.projectiles) {
+          const px = proj.x + (Math.random() - 0.5) * this.cameraShake * 0.5;
+          const py = 206 - proj.y + (Math.random() - 0.5) * this.cameraShake * 0.5;
+          const lifeAlpha = clamp(proj.life / 90, 0.25, 1);
+          const trail = Array.isArray(proj.trail) ? proj.trail : [];
+          if (trail.length > 1) {
+            for (let i = 0; i < trail.length; i += 1) {
+              const t = trail[i];
+              const a = ((i + 1) / trail.length) * 0.2 * lifeAlpha;
+              ctx.globalAlpha = a;
+              ctx.fillStyle = proj.type === "fire" ? "#ff6d3b" : "#8fd6ff";
+              ctx.fillRect(Math.round(t.x - 2), Math.round(206 - t.y - 2), 4, 4);
+            }
+            ctx.globalAlpha = 1;
+          }
+
+          if (proj.type === "fire") {
+            ctx.globalAlpha = 0.28 * lifeAlpha;
+            ctx.fillStyle = "#ff6d3b";
+            ctx.fillRect(Math.round(px - 8), Math.round(py - 8), 16, 16);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = "#ff8f43";
+            ctx.fillRect(Math.round(px - 5), Math.round(py - 5), 10, 10);
+            ctx.fillStyle = "#ffd166";
+            ctx.fillRect(Math.round(px - 2), Math.round(py - 2), 4, 4);
+          } else {
+            ctx.globalAlpha = 0.25 * lifeAlpha;
+            ctx.fillStyle = "#7fc9ff";
+            ctx.fillRect(Math.round(px - 7), Math.round(py - 7), 14, 14);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = "#b7ecff";
+            ctx.beginPath();
+            ctx.moveTo(Math.round(px), Math.round(py - 6));
+            ctx.lineTo(Math.round(px + 6), Math.round(py + 5));
+            ctx.lineTo(Math.round(px - 6), Math.round(py + 5));
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+      },
       drawHud() {
-        if (!this.player || !this.enemy) return;
+        if (!this.player) return;
+        if (this.state === "coop-fight" || this.state === "coop-over") {
+          drawLabel(`WAVE ${this.coopWave}/${this.coopMaxWaves}`, 10, 14, "#ffd166");
+          drawLabel(`NPC ${this.coopEnemies.length}`, 10, 27, "#dce8ff");
+          drawLabel(`${this.player.profile.name.toUpperCase()} HP ${Math.max(0, Math.floor(this.player.hp))}`, 10, 40, "#9df0b8");
+          if (this.enemy) drawLabel(`${this.enemy.profile.name.toUpperCase()} HP ${Math.max(0, Math.floor(this.enemy.hp))}`, 10, 53, "#9bd4ff");
+          else drawLabel("SOLO WAVES", 10, 53, "#9bd4ff");
+          return;
+        }
+        if (!this.enemy) return;
         const pRatio = this.player.hp / this.player.maxHp;
         const eRatio = this.enemy.hp / this.enemy.maxHp;
 
@@ -7131,6 +8382,28 @@
 
         if (this.player.combo > 1) drawLabel(`COMBO x${this.player.combo}`, 20, 58, "#ffcf6e");
       },
+      drawEntryScreen() {
+        const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bg.addColorStop(0, "#14213d");
+        bg.addColorStop(1, "#0b1224");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawLabel("MEJ-MUT FIGHTING", 112, 48, "#ffd166");
+        drawLabel("CHOOSE GAME TYPE", 124, 72, "#dce8ff");
+        const leftSel = this.rootMode === 0;
+        const rightSel = this.rootMode === 1;
+        ctx.fillStyle = leftSel ? "#ffd166" : "#33415a";
+        ctx.fillRect(88, 118, 136, 82);
+        ctx.fillStyle = rightSel ? "#ffd166" : "#33415a";
+        ctx.fillRect(256, 118, 136, 82);
+        ctx.fillStyle = "#0f1828";
+        ctx.fillRect(92, 122, 128, 74);
+        ctx.fillRect(260, 122, 128, 74);
+        drawLabel("SOLO", 136, 162, leftSel ? "#ffd166" : "#dce8ff");
+        drawLabel("MULTIPLAYER", 268, 162, rightSel ? "#ffd166" : "#dce8ff");
+        drawLabel("LEFT/RIGHT TO SWITCH", 114, 236, "#dce8ff");
+        drawLabel("ENTER TO CONTINUE", 144, 252, "#dce8ff");
+      },
       drawSelectScreen() {
         const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
         bg.addColorStop(0, "#1a2335");
@@ -7139,15 +8412,15 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         drawLabel("MEJ-MUT FIGHTING", 112, 30, "#ffd166");
-        drawLabel("VALJ KARAKTAR", 148, 48, "#e8f1ff");
+        drawLabel(this.state === "select-solo" ? "SOLO SETUP" : "MULTIPLAYER SETUP", 120, 48, "#e8f1ff");
 
-        const cardW = 84;
-        const gap = 8;
+        const gap = this.roster.length > 5 ? 6 : 8;
+        const cardW = clamp(Math.floor((canvas.width - 28 - gap * (this.roster.length - 1)) / this.roster.length), 62, 84);
         const startX = (canvas.width - (cardW * this.roster.length + gap * (this.roster.length - 1))) * 0.5;
         for (let i = 0; i < this.roster.length; i += 1) {
           const c = this.roster[i];
           const x = startX + i * (cardW + gap);
-          const y = 72;
+          const y = 66;
           const selected = i === this.selectedIndex;
           ctx.fillStyle = selected ? "#ffd166" : "#36465f";
           ctx.fillRect(x, y, cardW, 128);
@@ -7167,37 +8440,92 @@
           drawLabel(`SPD ${Math.round(c.speed * 100)}`, x + 7, y + 122, "#9bd4ff");
         }
 
-        drawLabel("A/D ELLER PILAR: VALJ", 108, 236, "#e8f1ff");
-        drawLabel("ENTER/SPACE: STARTA MATCH", 76, 252, "#e8f1ff");
+        const rows = this.state === "select-solo"
+          ? [
+            `FIGHTER: ${this.roster[this.selectedIndex].name.toUpperCase()}`,
+            `GAME MODE: ${this.playModes[this.playMode]}`,
+            ...(this.playMode === 1 ? [`START WAVE: ${this.waveOptions[this.waveOptionIndex]}`] : []),
+            `MAP: ${this.currentMap().name.toUpperCase()}`
+          ]
+          : [
+            `FIGHTER: ${this.roster[this.selectedIndex].name.toUpperCase()}`,
+            `NET MODE: ${this.netModes[this.netMode]}`,
+            `GAME MODE: ${this.playModes[this.playMode]}`,
+            ...(this.playMode === 1 ? [`START WAVE: ${this.waveOptions[this.waveOptionIndex]}`] : []),
+            `MAP: ${this.currentMap().name.toUpperCase()}`
+          ];
+        for (let i = 0; i < rows.length; i += 1) {
+          const y = 188 + i * 15;
+          const active = i === this.selectedRow;
+          if (active) {
+            ctx.fillStyle = "rgba(255,209,102,0.22)";
+            ctx.fillRect(34, y - 10, canvas.width - 68, 14);
+          }
+          drawLabel(rows[i], 42, y, active ? "#ffd166" : "#dce8ff");
+        }
+        drawLabel("UP/DOWN RAD, LEFT/RIGHT ANDRA", 60, 248, "#e8f1ff");
+        drawLabel("ENTER STARTAR, ESC TILLBAKA", 86, 262, "#e8f1ff");
+      },
+      drawLobby() {
+        const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bg.addColorStop(0, "#11192d");
+        bg.addColorStop(1, "#0a1020");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawLabel("MEJ-MUT ONLINE LOBBY", 96, 40, "#ffd166");
+        drawLabel(`MODE ${this.playModes[this.playMode]}`, 30, 72, "#dce8ff");
+        drawLabel(`MAP ${this.currentMap().name.toUpperCase()}`, 30, 90, "#dce8ff");
+        if (this.state === "lobby-host") {
+          drawLabel("DELA KODEN MED DIN VAN:", 30, 146, "#9bd4ff");
+          drawLabel(this.net.code || "------", 184, 174, "#ffd166");
+          drawLabel("VANTAR PA JOIN...", 156, 202, "#f0f4ff");
+        } else if (this.state === "lobby-join") {
+          drawLabel(`ANSLUTER MED KOD ${this.net.code}`, 86, 156, "#9bd4ff");
+          drawLabel("VANTAR PA HOST-ACCEPT...", 124, 182, "#f0f4ff");
+        } else {
+          drawLabel("ANSLUTEN. VANTAR PA MATCH-START...", 86, 170, "#f0f4ff");
+        }
+        drawLabel("ESC AVBRYTER", 176, 246, "#dce8ff");
       },
       drawFight() {
         this.drawBackground();
         this.drawHud();
-
-        const leftFirst = this.player.x <= this.enemy.x;
-        if (leftFirst) {
-          this.drawFighter(this.player);
-          this.drawFighter(this.enemy);
-        } else {
-          this.drawFighter(this.enemy);
-          this.drawFighter(this.player);
-        }
+        const coop = this.state === "coop-fight" || this.state === "coop-over";
+        const fighters = coop ? [this.player, this.enemy, ...this.coopEnemies] : [this.player, this.enemy];
+        fighters
+          .filter(Boolean)
+          .sort((a, b) => a.x - b.x)
+          .forEach((fighter) => this.drawFighter(fighter));
+        this.drawProjectiles();
         this.drawParticles();
 
         if (this.impactFlash > 0) {
           ctx.fillStyle = `rgba(255,240,180,${this.impactFlash * 0.24})`;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+        if (coop && this.state === "coop-fight" && this.coopEnemies.length === 0 && this.coopWave < this.coopMaxWaves) {
+          this.drawRoundState(`Vag ${this.coopWave} klar`, "Nasta vag laddas...");
+        } else if (coop && this.state === "coop-fight" && this.coopIntroTimer > 0) {
+          this.drawRoundState(this.coopIntroTitle || "BOSS", this.coopIntroSub || "PREPARE YOURSELF");
+        }
       },
       drawRoundState(text, sub) {
         ctx.fillStyle = "rgba(0,0,0,0.56)";
         ctx.fillRect(64, 92, canvas.width - 128, 86);
-        drawLabel(text.toUpperCase(), 108, 126, "#ffd166");
-        drawLabel(sub.toUpperCase(), 86, 148, "#f0f4ff");
+        drawLabel(String(text || "").toUpperCase(), 108, 126, "#ffd166");
+        drawLabel(String(sub || "").toUpperCase(), 86, 148, "#f0f4ff");
       },
       draw() {
-        if (this.state === "select") {
+        if (this.state === "entry") {
+          this.drawEntryScreen();
+          return;
+        }
+        if (this.state === "select-solo" || this.state === "select-multi") {
           this.drawSelectScreen();
+          return;
+        }
+        if (["lobby-host", "lobby-join", "guest-wait"].includes(this.state)) {
+          this.drawLobby();
           return;
         }
 
@@ -7209,6 +8537,8 @@
           const playerWon = this.playerWins > this.enemyWins;
           const headline = playerWon ? `${this.player.profile.name} tar matchen` : `${this.enemy.profile.name} tar matchen`;
           this.drawRoundState(headline, "Tryck Enter for ny match");
+        } else if (this.state === "coop-over") {
+          this.drawRoundState(this.winnerText || "CO-OP avslutad", "Tryck Enter for ny match");
         }
       }
     };
@@ -7263,6 +8593,9 @@
         document.exitFullscreen().catch(() => {});
       }
       unlockPointerFromGame();
+      if (app.currentGame && typeof app.currentGame.onExit === "function") {
+        try { app.currentGame.onExit(); } catch (_) {}
+      }
       app.currentGame = null;
       app.currentKey = "";
       canvas.style.cursor = "default";
