@@ -1175,7 +1175,14 @@
       start: document.getElementById("mobileBtnStart")
     };
     function detectMobileCapability() {
-      return false;
+      const ua = navigator.userAgent || "";
+      const isPhoneUa = /Android|iPhone|iPod|IEMobile|Opera Mini|Windows Phone/i.test(ua);
+      const isIpad = /\biPad\b/i.test(ua) || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+      const isCoarsePointer = window.matchMedia ? window.matchMedia("(pointer: coarse)").matches : false;
+      const screenWidth = window.screen && typeof window.screen.width === "number" ? window.screen.width : window.innerWidth;
+      const screenHeight = window.screen && typeof window.screen.height === "number" ? window.screen.height : window.innerHeight;
+      const shortestEdge = Math.min(screenWidth, screenHeight);
+      return isPhoneUa || isIpad || (isCoarsePointer && shortestEdge <= 920);
     }
 
     const supportsMobileController = detectMobileCapability();
@@ -6685,7 +6692,7 @@
       coopEnemies: [],
       keys: { left: false, right: false, jump: false, crouch: false, block: false },
       pulses: { light: 0, heavy: 0, special: 0 },
-      net: { role: "none", channel: null, code: "", connected: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0 },
+      net: { role: "none", transport: "none", pc: null, channel: null, code: "", connected: false, linkReady: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0 },
       npcModelPath: "assets/models/Ch36_nonPBR.fbx",
       npc3d: {
         loading: false,
@@ -6971,15 +6978,65 @@
         for (let i = 0; i < 6; i += 1) code += chars[Math.floor(Math.random() * chars.length)];
         return code;
       },
+      async waitIce(pc) {
+        if (!pc || pc.iceGatheringState === "complete") return;
+        await new Promise((resolve) => {
+          const cb = () => {
+            if (pc.iceGatheringState === "complete") {
+              pc.removeEventListener("icegatheringstatechange", cb);
+              resolve();
+            }
+          };
+          pc.addEventListener("icegatheringstatechange", cb);
+        });
+      },
+      parseSignalCode(raw) {
+        try {
+          return JSON.parse(atob(String(raw || "").trim()));
+        } catch (_) {
+          return null;
+        }
+      },
+      attachNetChannel(channel) {
+        this.net.channel = channel;
+        if (!channel) return;
+        if (this.net.transport === "webrtc") {
+          this.net.linkReady = channel.readyState === "open";
+          channel.onopen = () => {
+            this.net.linkReady = true;
+            if (this.net.role === "guest" && this.state === "lobby-join" && !this.net.connected) {
+              this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
+            }
+          };
+          channel.onclose = () => {
+            this.net.linkReady = false;
+          };
+          channel.onmessage = (e) => {
+            if (typeof e.data !== "string") return;
+            let msg = null;
+            try { msg = JSON.parse(e.data); } catch (_) { return; }
+            this.handleNet(msg);
+          };
+          return;
+        }
+        this.net.linkReady = true;
+        channel.onmessage = (e) => this.handleNet(e.data);
+      },
       closeNetwork() {
         if (this.net.channel) {
           try { this.net.channel.close(); } catch (_) {}
         }
+        if (this.net.pc) {
+          try { this.net.pc.close(); } catch (_) {}
+        }
         this.net = {
           role: "none",
+          transport: "none",
+          pc: null,
           channel: null,
           code: "",
           connected: false,
+          linkReady: false,
           remoteInput: this.emptyInput(),
           sendTimer: 0,
           snapTimer: 0,
@@ -6988,43 +7045,117 @@
       },
       sendNet(msg) {
         if (!this.net.channel) return;
+        if (this.net.transport === "webrtc") {
+          if (this.net.channel.readyState !== "open") return;
+          try { this.net.channel.send(JSON.stringify(msg)); } catch (_) {}
+          return;
+        }
         try { this.net.channel.postMessage(msg); } catch (_) {}
       },
-      startHostLobby() {
+      async startHostLobby() {
+        this.closeNetwork();
+        this.net.role = "host";
+        this.net.connected = false;
+        this.net.linkReady = false;
+        this.net.remoteInput = this.emptyInput();
+        this.net.sendTimer = 0;
+        this.net.snapTimer = 0;
+        this.net.joinTimer = 0;
+        this.state = "lobby-host";
+        if (typeof RTCPeerConnection !== "undefined") {
+          try {
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+            this.net.transport = "webrtc";
+            this.net.pc = pc;
+            this.net.code = "WEBRTC";
+            const dc = pc.createDataChannel("mejmut");
+            this.attachNetChannel(dc);
+            await pc.setLocalDescription(await pc.createOffer());
+            await this.waitIce(pc);
+            window.prompt("MEJMUT HOST-KOD: skicka till din van", btoa(JSON.stringify(pc.localDescription)));
+            const answerRaw = window.prompt("Klistra in MEJMUT ANSWER-kod fran van", "") || "";
+            if (!answerRaw.trim()) {
+              this.init();
+              return;
+            }
+            const answer = this.parseSignalCode(answerRaw);
+            if (!answer) {
+              this.init();
+              return;
+            }
+            await pc.setRemoteDescription(answer);
+            return;
+          } catch (_) {
+            this.init();
+            return;
+          }
+        }
         if (typeof BroadcastChannel === "undefined") {
-          this.winnerText = "BroadcastChannel saknas";
+          this.winnerText = "WebRTC/Broadcast saknas";
           this.state = "match-over";
           return;
         }
-        this.closeNetwork();
         const code = this.genCode();
         const channel = new BroadcastChannel(`mejmut-${code}`);
-        this.net.role = "host";
-        this.net.channel = channel;
+        this.net.transport = "broadcast";
         this.net.code = code;
-        this.net.connected = false;
-        this.net.remoteInput = this.emptyInput();
-        channel.onmessage = (e) => this.handleNet(e.data);
-        this.state = "lobby-host";
+        this.attachNetChannel(channel);
       },
-      startJoinLobby() {
+      async startJoinLobby() {
+        let fallbackCode = "";
+        if (typeof RTCPeerConnection !== "undefined") {
+          const offerRaw = window.prompt("Klistra in MEJMUT HOST-koden", "") || "";
+          const trimmed = offerRaw.trim();
+          if (!trimmed) return;
+          const offer = this.parseSignalCode(trimmed);
+          if (offer) {
+            this.closeNetwork();
+            this.net.role = "guest";
+            this.net.transport = "webrtc";
+            this.net.connected = false;
+            this.net.linkReady = false;
+            this.net.code = "WEBRTC";
+            this.net.remoteInput = this.emptyInput();
+            this.net.sendTimer = 0;
+            this.net.snapTimer = 0;
+            this.net.joinTimer = 0;
+            this.state = "lobby-join";
+            try {
+              const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+              this.net.pc = pc;
+              pc.ondatachannel = (e) => this.attachNetChannel(e.channel);
+              await pc.setRemoteDescription(offer);
+              await pc.setLocalDescription(await pc.createAnswer());
+              await this.waitIce(pc);
+              window.prompt("MEJMUT ANSWER-KOD: skicka till host", btoa(JSON.stringify(pc.localDescription)));
+              return;
+            } catch (_) {
+              this.init();
+              return;
+            }
+          }
+          const maybeCode = trimmed.toUpperCase();
+          if (/^[A-Z0-9]{4,10}$/.test(maybeCode)) fallbackCode = maybeCode;
+          else return;
+        }
         if (typeof BroadcastChannel === "undefined") {
-          this.winnerText = "BroadcastChannel saknas";
+          this.winnerText = "WebRTC/Broadcast saknas";
           this.state = "match-over";
           return;
         }
-        const raw = window.prompt("Skriv host-kod", "") || "";
+        const raw = fallbackCode || (window.prompt("Skriv host-kod", "") || "");
         const code = raw.trim().toUpperCase();
         if (!code) return;
         this.closeNetwork();
         const channel = new BroadcastChannel(`mejmut-${code}`);
         this.net.role = "guest";
-        this.net.channel = channel;
+        this.net.transport = "broadcast";
         this.net.code = code;
         this.net.connected = false;
+        this.net.linkReady = true;
         this.net.remoteInput = this.emptyInput();
         this.net.joinTimer = 0;
-        channel.onmessage = (e) => this.handleNet(e.data);
+        this.attachNetChannel(channel);
         this.state = "lobby-join";
         this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
       },
@@ -8476,11 +8607,17 @@
         drawLabel(`MODE ${this.playModes[this.playMode]}`, 30, 72, "#dce8ff");
         drawLabel(`MAP ${this.currentMap().name.toUpperCase()}`, 30, 90, "#dce8ff");
         if (this.state === "lobby-host") {
-          drawLabel("DELA KODEN MED DIN VAN:", 30, 146, "#9bd4ff");
-          drawLabel(this.net.code || "------", 184, 174, "#ffd166");
+          if (this.net.transport === "webrtc") {
+            drawLabel("HOST-KOD VISAS I POPUP", 96, 146, "#9bd4ff");
+            drawLabel("KLISTRA IN ANSWER-KOD NAR DEN KOMMER", 30, 174, "#ffd166");
+          } else {
+            drawLabel("DELA KODEN MED DIN VAN:", 30, 146, "#9bd4ff");
+            drawLabel(this.net.code || "------", 184, 174, "#ffd166");
+          }
           drawLabel("VANTAR PA JOIN...", 156, 202, "#f0f4ff");
         } else if (this.state === "lobby-join") {
-          drawLabel(`ANSLUTER MED KOD ${this.net.code}`, 86, 156, "#9bd4ff");
+          if (this.net.transport === "webrtc") drawLabel("ANSLUTER MED HOST-KOD FRAN POPUP", 56, 156, "#9bd4ff");
+          else drawLabel(`ANSLUTER MED KOD ${this.net.code}`, 86, 156, "#9bd4ff");
           drawLabel("VANTAR PA HOST-ACCEPT...", 124, 182, "#f0f4ff");
         } else {
           drawLabel("ANSLUTEN. VANTAR PA MATCH-START...", 86, 170, "#f0f4ff");
