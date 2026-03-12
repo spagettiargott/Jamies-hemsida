@@ -6711,7 +6711,7 @@
       coopEnemies: [],
       keys: { left: false, right: false, jump: false, crouch: false, block: false },
       pulses: { light: 0, heavy: 0, special: 0 },
-      net: { role: "none", transport: "none", pc: null, peer: null, channel: null, code: "", connected: false, linkReady: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0 },
+      net: { role: "none", transport: "none", pc: null, peer: null, channel: null, code: "", connected: false, linkReady: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0, rematchPending: false },
       npcModelPath: "assets/models/Ch36_nonPBR.fbx",
       npc3d: {
         loading: false,
@@ -7190,7 +7190,8 @@
           remoteInput: this.emptyInput(),
           sendTimer: 0,
           snapTimer: 0,
-          joinTimer: 0
+          joinTimer: 0,
+          rematchPending: false
         };
       },
       sendNet(msg) {
@@ -7359,6 +7360,14 @@
       handleNet(m) {
         if (!m || !m.t) return;
         if (this.net.role === "host") {
+          if (
+            m.t === "rematch" &&
+            this.net.connected &&
+            (this.state === "match-over" || this.state === "coop-over")
+          ) {
+            this.startMultiplayerRematch();
+            return;
+          }
           if (m.t === "join" && this.state === "lobby-host" && !this.net.connected) {
             this.net.connected = true;
             this.remoteSelectedIndex = clamp(Number(m.selectedIndex) || 0, 0, this.roster.length - 1);
@@ -7375,6 +7384,7 @@
             this.net.connected = true;
             if (this.state === "lobby-join") this.state = "guest-wait";
           }
+          this.net.rematchPending = false;
           this.applySnapshot(m.s);
         }
       },
@@ -7950,7 +7960,32 @@
         if (!this.onlineVs) this.enemyIndex = this.randomEnemyIndex([this.selectedIndex]);
         this.startRound();
       },
-      onClick() {
+      isOnlineSession() {
+        return this.net.role === "host" || this.net.role === "guest";
+      },
+      getRematchButtonRect() {
+        return { x: 154, y: 176, w: 172, h: 34 };
+      },
+      startMultiplayerRematch() {
+        if (!this.net.connected) return;
+        if (this.net.role === "guest") {
+          this.net.rematchPending = true;
+          this.sendNet({ t: "rematch" });
+          return;
+        }
+        this.net.rematchPending = false;
+        this.playerWins = 0;
+        this.enemyWins = 0;
+        this.round = 1;
+        if (this.playMode === 0) {
+          this.enemyIndex = this.remoteSelectedIndex;
+          this.startRound();
+        } else {
+          this.startCoop(true);
+        }
+        this.sendNet({ t: "snap", s: this.makeSnapshot() });
+      },
+      onClick(e) {
         if (this.state === "entry") {
           this.state = this.rootMode === 0 ? "select-solo" : "select-multi";
           this.selectedRow = 0;
@@ -7964,8 +7999,20 @@
           this.nextRound();
           return;
         }
-        if ((this.state === "match-over" || this.state === "coop-over") && this.net.role !== "guest") {
-          this.init();
+        if (this.state === "match-over" || this.state === "coop-over") {
+          if (this.isOnlineSession() && e && typeof e.clientX === "number" && typeof e.clientY === "number") {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              const px = ((e.clientX - rect.left) / rect.width) * canvas.width;
+              const py = ((e.clientY - rect.top) / rect.height) * canvas.height;
+              const btn = this.getRematchButtonRect();
+              if (px >= btn.x && px <= btn.x + btn.w && py >= btn.y && py <= btn.y + btn.h) {
+                this.startMultiplayerRematch();
+              }
+            }
+            return;
+          }
+          if (!this.isOnlineSession() && this.net.role !== "guest") this.init();
           return;
         }
         if (this.state === "fight" || this.state === "coop-fight") this.pulses.light += 1;
@@ -8052,7 +8099,14 @@
         }
 
         if (this.state === "match-over" || this.state === "coop-over") {
-          if (this.net.role !== "guest" && (code === "Enter" || code === "Space")) this.init();
+          if (code === "Escape" || code === "Backspace") {
+            this.init();
+            return;
+          }
+          if (code === "Enter" || code === "Space") {
+            if (this.isOnlineSession()) this.startMultiplayerRematch();
+            else if (this.net.role !== "guest") this.init();
+          }
           return;
         }
 
@@ -8850,6 +8904,17 @@
         drawLabel(String(text || "").toUpperCase(), 108, 126, "#ffd166");
         drawLabel(String(sub || "").toUpperCase(), 86, 148, "#f0f4ff");
       },
+      drawRematchButton() {
+        const btn = this.getRematchButtonRect();
+        const host = this.net.role === "host";
+        const pending = this.net.role === "guest" && this.net.rematchPending;
+        const label = pending ? "VANTAR..." : (host ? "REMATCH" : "BEGAR REMATCH");
+        ctx.fillStyle = pending ? "#2f466a" : (host ? "#ffd166" : "#57c6ff");
+        ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+        ctx.fillStyle = "#10203a";
+        ctx.fillRect(btn.x + 3, btn.y + 3, btn.w - 6, btn.h - 6);
+        drawLabel(label, btn.x + 16, btn.y + 21, pending ? "#9fc0e8" : "#eaf2ff");
+      },
       draw() {
         if (this.state === "entry") {
           this.drawEntryScreen();
@@ -8871,9 +8936,13 @@
         } else if (this.state === "match-over") {
           const playerWon = this.playerWins > this.enemyWins;
           const headline = playerWon ? `${this.player.profile.name} tar matchen` : `${this.enemy.profile.name} tar matchen`;
-          this.drawRoundState(headline, "Tryck Enter for ny match");
+          const sub = this.isOnlineSession() ? "Rematch eller ESC for att avsluta" : "Tryck Enter for ny match";
+          this.drawRoundState(headline, sub);
+          if (this.isOnlineSession()) this.drawRematchButton();
         } else if (this.state === "coop-over") {
-          this.drawRoundState(this.winnerText || "CO-OP avslutad", "Tryck Enter for ny match");
+          const sub = this.isOnlineSession() ? "Rematch eller ESC for att avsluta" : "Tryck Enter for ny match";
+          this.drawRoundState(this.winnerText || "CO-OP avslutad", sub);
+          if (this.isOnlineSession()) this.drawRematchButton();
         }
       }
     };
@@ -9052,10 +9121,10 @@
       }
     });
 
-    canvas.addEventListener("click", () => {
+    canvas.addEventListener("click", (e) => {
       if (app.mode === "game" && !app.mobileEnabled) lockPointerToGame();
       if (app.mode !== "game" || !app.currentGame || !app.currentGame.onClick) return;
-      app.currentGame.onClick();
+      app.currentGame.onClick(e);
     });
 
     document.addEventListener("pointerlockchange", () => {
