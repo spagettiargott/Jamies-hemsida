@@ -550,6 +550,11 @@
       display: none !important;
     }
 
+    .game-view.mobile-portrait-lock:fullscreen .mobile-rotate-lock,
+    .game-view.mobile-portrait-lock:-webkit-full-screen .mobile-rotate-lock {
+      display: flex !important;
+    }
+
     .game-view:fullscreen .game-layout,
     .game-view:-webkit-full-screen .game-layout {
       margin: 0;
@@ -898,6 +903,10 @@
       display: none !important;
     }
 
+    .game-view.mobile-portrait-lock .pong-side-panel {
+      display: none !important;
+    }
+
     @media (max-width: 760px) {
       .game-view.mobile-landscape .game-layout {
         grid-template-columns: minmax(80px, 22vw) minmax(0, 1fr) minmax(116px, 32vw);
@@ -1225,6 +1234,7 @@
         startupContinue: "Fortsatt",
         startupCodeOk: "Koden accepterad. Helskarms-timer ar avstangd.",
         startupCodeBad: "Fel kod. Timern ar fortfarande aktiv.",
+        rotatePrompt: "VAND TELEFONEN TILL LANDSKAP FOR ATT SPELA.",
         pongRestart: "Starta om",
         pongPause: "Pausa",
         pongResume: "Fortsatt",
@@ -1252,6 +1262,7 @@
         startupContinue: "Continue",
         startupCodeOk: "Code accepted. Fullscreen timer is disabled.",
         startupCodeBad: "Wrong code. Timer is still active.",
+        rotatePrompt: "ROTATE YOUR PHONE TO LANDSCAPE TO PLAY.",
         pongRestart: "Restart",
         pongPause: "Pause",
         pongResume: "Resume",
@@ -1455,6 +1466,7 @@
       startupLanguageLabel.textContent = t.startupLanguage;
       startupCodeInput.placeholder = t.startupCodePlaceholder;
       startupContinueBtn.textContent = t.startupContinue;
+      if (mobileRotateLock) mobileRotateLock.textContent = t.rotatePrompt;
 
       const mobileNote = document.querySelector(".mobile-note");
       if (mobileNote) mobileNote.textContent = t.mobileSupport;
@@ -1935,12 +1947,19 @@
       refreshMobileCapability();
       const show = shouldShowMobileController();
       const landscapeMode = show && isMobileLandscape();
+      const portraitLockMode = show && !landscapeMode;
 
-      mobileController.classList.toggle("show", show);
+      mobileController.classList.toggle("show", show && landscapeMode);
       gameView.classList.toggle("mobile-landscape", landscapeMode);
-      gameView.classList.remove("mobile-portrait-lock");
+      gameView.classList.toggle("mobile-portrait-lock", portraitLockMode);
       if (mobileRotateLock) {
-        mobileRotateLock.setAttribute("aria-hidden", "true");
+        mobileRotateLock.setAttribute("aria-hidden", portraitLockMode ? "false" : "true");
+      }
+      if (mobileController) {
+        mobileController.setAttribute("aria-hidden", show && landscapeMode ? "false" : "true");
+      }
+      if (portraitLockMode) {
+        resetVirtualInput();
       }
     }
 
