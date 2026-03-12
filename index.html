@@ -7184,34 +7184,21 @@
           if (m.t === "join" && this.state === "lobby-host" && !this.net.connected) {
             this.net.connected = true;
             this.remoteSelectedIndex = clamp(Number(m.selectedIndex) || 0, 0, this.roster.length - 1);
-            this.sendNet({
-              t: "accept",
-              playMode: this.playMode,
-              mapIndex: this.mapIndex,
-              startWave: this.waveOptions[this.waveOptionIndex],
-              hostIndex: this.selectedIndex,
-              guestIndex: this.remoteSelectedIndex
-            });
             this.startHostSession();
+            this.sendNet({ t: "snap", s: this.makeSnapshot() });
             return;
           }
           if (m.t === "input") this.net.remoteInput = m.i || this.emptyInput();
           return;
         }
         if (this.net.role !== "guest") return;
-        if (m.t === "accept" && !this.net.connected && this.state === "lobby-join") {
-          this.net.connected = true;
-          this.playMode = clamp(Number(m.playMode) || 0, 0, this.playModes.length - 1);
-          this.mapIndex = clamp(Number(m.mapIndex) || 0, 0, this.maps.length - 1);
-          const startWave = clamp(Number(m.startWave) || 1, 1, this.coopMaxWaves);
-          const optionIdx = this.waveOptions.indexOf(startWave);
-          if (optionIdx >= 0) this.waveOptionIndex = optionIdx;
-          this.enemyIndex = clamp(Number(m.hostIndex) || 0, 0, this.roster.length - 1);
-          this.remoteSelectedIndex = clamp(Number(m.guestIndex) || this.selectedIndex, 0, this.roster.length - 1);
-          this.state = "guest-wait";
-          return;
+        if (m.t === "snap") {
+          if (!this.net.connected) {
+            this.net.connected = true;
+            if (this.state === "lobby-join") this.state = "guest-wait";
+          }
+          this.applySnapshot(m.s);
         }
-        if (m.t === "snap" && this.net.connected) this.applySnapshot(m.s);
       },
       startFromSelect() {
         this.onlineVs = false;
@@ -8637,7 +8624,7 @@
         } else if (this.state === "lobby-join") {
           if (this.net.transport === "webrtc") drawLabel("ANSLUTER MED HOST-KOD FRAN POPUP", 56, 156, "#9bd4ff");
           else drawLabel(`ANSLUTER MED KOD ${this.net.code}`, 86, 156, "#9bd4ff");
-          drawLabel("VANTAR PA HOST-ACCEPT...", 124, 182, "#f0f4ff");
+          drawLabel("VANTAR PA HOST-START...", 132, 182, "#f0f4ff");
         } else {
           drawLabel("ANSLUTEN. VANTAR PA MATCH-START...", 86, 170, "#f0f4ff");
         }
