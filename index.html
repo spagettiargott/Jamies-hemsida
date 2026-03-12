@@ -6711,7 +6711,7 @@
       coopEnemies: [],
       keys: { left: false, right: false, jump: false, crouch: false, block: false },
       pulses: { light: 0, heavy: 0, special: 0 },
-      net: { role: "none", transport: "none", pc: null, channel: null, code: "", connected: false, linkReady: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0 },
+      net: { role: "none", transport: "none", pc: null, peer: null, channel: null, code: "", connected: false, linkReady: false, remoteInput: null, sendTimer: 0, snapTimer: 0, joinTimer: 0 },
       npcModelPath: "assets/models/Ch36_nonPBR.fbx",
       npc3d: {
         loading: false,
@@ -7021,9 +7021,131 @@
           return null;
         }
       },
+      async ensurePeerJs() {
+        if (typeof window.Peer !== "undefined") return true;
+        try {
+          await this.loadScriptOnce("https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js");
+          return typeof window.Peer !== "undefined";
+        } catch (_) {
+          return false;
+        }
+      },
+      peerRoomId(code) {
+        return `mejmut-${String(code || "").toLowerCase()}`;
+      },
+      async startHostLobbyPeer(code) {
+        if (!(await this.ensurePeerJs())) return false;
+        const roomCode = this.normalizeLobbyCode(code);
+        if (!roomCode) return false;
+        const roomId = this.peerRoomId(roomCode);
+        this.closeNetwork();
+        this.net.role = "host";
+        this.net.transport = "peerjs";
+        this.net.connected = false;
+        this.net.linkReady = false;
+        this.net.code = roomCode;
+        this.net.remoteInput = this.emptyInput();
+        this.net.sendTimer = 0;
+        this.net.snapTimer = 0;
+        this.net.joinTimer = 0;
+        this.state = "lobby-host";
+        return await new Promise((resolve) => {
+          let settled = false;
+          const PeerCtor = window.Peer;
+          const peer = new PeerCtor(roomId, { debug: 0 });
+          this.net.peer = peer;
+          const finish = (ok) => {
+            if (settled) return;
+            settled = true;
+            resolve(ok);
+          };
+          const fail = () => {
+            try { peer.destroy(); } catch (_) {}
+            this.net.peer = null;
+            finish(false);
+          };
+          peer.on("connection", (conn) => {
+            if (this.net.connected) {
+              try { conn.close(); } catch (_) {}
+              return;
+            }
+            this.attachNetChannel(conn);
+          });
+          peer.on("open", () => {
+            this.net.linkReady = true;
+            finish(true);
+          });
+          peer.on("error", () => fail());
+          setTimeout(() => {
+            if (!settled) fail();
+          }, 7000);
+        });
+      },
+      async startJoinLobbyPeer(code) {
+        if (!(await this.ensurePeerJs())) return false;
+        const roomCode = this.normalizeLobbyCode(code);
+        if (!roomCode) return false;
+        const roomId = this.peerRoomId(roomCode);
+        this.closeNetwork();
+        this.net.role = "guest";
+        this.net.transport = "peerjs";
+        this.net.connected = false;
+        this.net.linkReady = false;
+        this.net.code = roomCode;
+        this.net.remoteInput = this.emptyInput();
+        this.net.sendTimer = 0;
+        this.net.snapTimer = 0;
+        this.net.joinTimer = 0;
+        this.state = "lobby-join";
+        return await new Promise((resolve) => {
+          let settled = false;
+          const PeerCtor = window.Peer;
+          const peer = new PeerCtor(undefined, { debug: 0 });
+          this.net.peer = peer;
+          const finish = (ok) => {
+            if (settled) return;
+            settled = true;
+            resolve(ok);
+          };
+          const fail = () => {
+            try { peer.destroy(); } catch (_) {}
+            this.net.peer = null;
+            finish(false);
+          };
+          peer.on("open", () => {
+            const conn = peer.connect(roomId, { reliable: true });
+            this.attachNetChannel(conn);
+            finish(true);
+          });
+          peer.on("error", () => fail());
+          setTimeout(() => {
+            if (!settled) fail();
+          }, 7000);
+        });
+      },
       attachNetChannel(channel) {
         this.net.channel = channel;
         if (!channel) return;
+        if (this.net.transport === "peerjs") {
+          this.net.linkReady = !!channel.open;
+          channel.on("open", () => {
+            this.net.linkReady = true;
+            if (this.net.role === "guest" && this.state === "lobby-join" && !this.net.connected) {
+              this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
+            }
+          });
+          channel.on("close", () => {
+            this.net.linkReady = false;
+          });
+          channel.on("data", (data) => {
+            let msg = data;
+            if (typeof data === "string") {
+              try { msg = JSON.parse(data); } catch (_) { return; }
+            }
+            this.handleNet(msg);
+          });
+          return;
+        }
         if (this.net.transport === "webrtc") {
           this.net.linkReady = channel.readyState === "open";
           channel.onopen = () => {
@@ -7053,10 +7175,14 @@
         if (this.net.pc) {
           try { this.net.pc.close(); } catch (_) {}
         }
+        if (this.net.peer) {
+          try { this.net.peer.destroy(); } catch (_) {}
+        }
         this.net = {
           role: "none",
           transport: "none",
           pc: null,
+          peer: null,
           channel: null,
           code: "",
           connected: false,
@@ -7069,12 +7195,92 @@
       },
       sendNet(msg) {
         if (!this.net.channel) return;
+        if (this.net.transport === "peerjs") {
+          if (!this.net.channel.open) return;
+          try { this.net.channel.send(msg); } catch (_) {}
+          return;
+        }
         if (this.net.transport === "webrtc") {
           if (this.net.channel.readyState !== "open") return;
           try { this.net.channel.send(JSON.stringify(msg)); } catch (_) {}
           return;
         }
         try { this.net.channel.postMessage(msg); } catch (_) {}
+      },
+      async startHostLobbyWebRtc() {
+        this.closeNetwork();
+        this.net.role = "host";
+        this.net.transport = "webrtc";
+        this.net.connected = false;
+        this.net.linkReady = false;
+        this.net.code = "WEBRTC";
+        this.net.remoteInput = this.emptyInput();
+        this.net.sendTimer = 0;
+        this.net.snapTimer = 0;
+        this.net.joinTimer = 0;
+        this.state = "lobby-host";
+        if (typeof RTCPeerConnection === "undefined") {
+          this.winnerText = "WebRTC/Broadcast saknas";
+          this.state = "match-over";
+          return;
+        }
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+          this.net.pc = pc;
+          const dc = pc.createDataChannel("mejmut");
+          this.attachNetChannel(dc);
+          await pc.setLocalDescription(await pc.createOffer());
+          await this.waitIce(pc);
+          window.prompt("MEJMUT HOST-KOD: skicka till din van", btoa(JSON.stringify(pc.localDescription)));
+          const answerRaw = window.prompt("Klistra in MEJMUT ANSWER-kod fran van", "") || "";
+          if (!answerRaw.trim()) {
+            this.init();
+            return;
+          }
+          const answer = this.parseSignalCode(answerRaw);
+          if (!answer) {
+            this.init();
+            return;
+          }
+          await pc.setRemoteDescription(answer);
+        } catch (_) {
+          this.init();
+        }
+      },
+      async startJoinLobbyWebRtc(offerRaw = "") {
+        const provided = String(offerRaw || "");
+        const raw = provided || (window.prompt("Klistra in MEJMUT HOST-koden", "") || "");
+        const trimmed = raw.trim();
+        if (!trimmed) return;
+        const offer = this.parseSignalCode(trimmed);
+        if (!offer) return;
+        this.closeNetwork();
+        this.net.role = "guest";
+        this.net.transport = "webrtc";
+        this.net.connected = false;
+        this.net.linkReady = false;
+        this.net.code = "WEBRTC";
+        this.net.remoteInput = this.emptyInput();
+        this.net.sendTimer = 0;
+        this.net.snapTimer = 0;
+        this.net.joinTimer = 0;
+        this.state = "lobby-join";
+        if (typeof RTCPeerConnection === "undefined") {
+          this.winnerText = "WebRTC/Broadcast saknas";
+          this.state = "match-over";
+          return;
+        }
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+          this.net.pc = pc;
+          pc.ondatachannel = (e) => this.attachNetChannel(e.channel);
+          await pc.setRemoteDescription(offer);
+          await pc.setLocalDescription(await pc.createAnswer());
+          await this.waitIce(pc);
+          window.prompt("MEJMUT ANSWER-KOD: skicka till host", btoa(JSON.stringify(pc.localDescription)));
+        } catch (_) {
+          this.init();
+        }
       },
       async startHostLobby() {
         this.closeNetwork();
@@ -7086,8 +7292,20 @@
         this.net.snapTimer = 0;
         this.net.joinTimer = 0;
         this.state = "lobby-host";
+        const code = this.genCode();
+        if (await this.startHostLobbyPeer(code)) {
+          return;
+        }
         if (typeof BroadcastChannel !== "undefined") {
-          const code = this.genCode();
+          this.closeNetwork();
+          this.net.role = "host";
+          this.net.connected = false;
+          this.net.linkReady = false;
+          this.net.remoteInput = this.emptyInput();
+          this.net.sendTimer = 0;
+          this.net.snapTimer = 0;
+          this.net.joinTimer = 0;
+          this.state = "lobby-host";
           const channel = new BroadcastChannel(`mejmut-${code}`);
           this.net.transport = "broadcast";
           this.net.code = code;
@@ -7095,85 +7313,45 @@
           return;
         }
         if (typeof RTCPeerConnection !== "undefined") {
-          try {
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-            this.net.transport = "webrtc";
-            this.net.pc = pc;
-            this.net.code = "WEBRTC";
-            const dc = pc.createDataChannel("mejmut");
-            this.attachNetChannel(dc);
-            await pc.setLocalDescription(await pc.createOffer());
-            await this.waitIce(pc);
-            window.prompt("MEJMUT HOST-KOD: skicka till din van", btoa(JSON.stringify(pc.localDescription)));
-            const answerRaw = window.prompt("Klistra in MEJMUT ANSWER-kod fran van", "") || "";
-            if (!answerRaw.trim()) {
-              this.init();
-              return;
-            }
-            const answer = this.parseSignalCode(answerRaw);
-            if (!answer) {
-              this.init();
-              return;
-            }
-            await pc.setRemoteDescription(answer);
-            return;
-          } catch (_) {
-            this.init();
-            return;
-          }
+          await this.startHostLobbyWebRtc();
+          return;
         }
         this.winnerText = "WebRTC/Broadcast saknas";
         this.state = "match-over";
       },
       async startJoinLobby() {
-        if (typeof BroadcastChannel !== "undefined") {
-          const raw = window.prompt("Skriv host-kod (ex: 174kds)", "") || "";
-          const code = this.normalizeLobbyCode(raw);
-          if (!code) return;
-          this.closeNetwork();
-          const channel = new BroadcastChannel(`mejmut-${code}`);
-          this.net.role = "guest";
-          this.net.transport = "broadcast";
-          this.net.code = code;
-          this.net.connected = false;
-          this.net.linkReady = true;
-          this.net.remoteInput = this.emptyInput();
-          this.net.joinTimer = 0;
-          this.attachNetChannel(channel);
-          this.state = "lobby-join";
-          this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
-          return;
-        }
+        const raw = window.prompt("Skriv host-kod (ex: 174kds) eller klistra in HOST-kod", "") || "";
+        const trimmed = raw.trim();
+        if (!trimmed) return;
         if (typeof RTCPeerConnection !== "undefined") {
-          const offerRaw = window.prompt("Klistra in MEJMUT HOST-koden", "") || "";
-          const trimmed = offerRaw.trim();
-          if (!trimmed) return;
           const offer = this.parseSignalCode(trimmed);
-          if (!offer) return;
-          this.closeNetwork();
-          this.net.role = "guest";
-          this.net.transport = "webrtc";
-          this.net.connected = false;
-          this.net.linkReady = false;
-          this.net.code = "WEBRTC";
-          this.net.remoteInput = this.emptyInput();
-          this.net.sendTimer = 0;
-          this.net.snapTimer = 0;
-          this.net.joinTimer = 0;
-          this.state = "lobby-join";
-          try {
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-            this.net.pc = pc;
-            pc.ondatachannel = (e) => this.attachNetChannel(e.channel);
-            await pc.setRemoteDescription(offer);
-            await pc.setLocalDescription(await pc.createAnswer());
-            await this.waitIce(pc);
-            window.prompt("MEJMUT ANSWER-KOD: skicka till host", btoa(JSON.stringify(pc.localDescription)));
-            return;
-          } catch (_) {
-            this.init();
+          if (offer) {
+            await this.startJoinLobbyWebRtc(trimmed);
             return;
           }
+        }
+        const code = this.normalizeLobbyCode(trimmed);
+        if (code) {
+          if (await this.startJoinLobbyPeer(code)) return;
+          if (typeof BroadcastChannel !== "undefined") {
+            this.closeNetwork();
+            this.net.role = "guest";
+            this.net.transport = "broadcast";
+            this.net.code = code;
+            this.net.connected = false;
+            this.net.linkReady = true;
+            this.net.remoteInput = this.emptyInput();
+            this.net.joinTimer = 0;
+            const channel = new BroadcastChannel(`mejmut-${code}`);
+            this.attachNetChannel(channel);
+            this.state = "lobby-join";
+            this.sendNet({ t: "join", selectedIndex: this.selectedIndex });
+            return;
+          }
+        }
+        if (typeof RTCPeerConnection !== "undefined") {
+          await this.startJoinLobbyWebRtc();
+          return;
         }
         this.winnerText = "WebRTC/Broadcast saknas";
         this.state = "match-over";
@@ -7855,6 +8033,16 @@
 
         if (["lobby-host", "lobby-join", "guest-wait"].includes(this.state)) {
           if (!repeat && (code === "Escape" || code === "Backspace")) this.init();
+          if (
+            !repeat &&
+            (code === "Enter" || code === "Space") &&
+            !this.net.connected &&
+            this.net.transport === "broadcast" &&
+            typeof RTCPeerConnection !== "undefined"
+          ) {
+            if (this.state === "lobby-host") this.startHostLobbyWebRtc();
+            else if (this.state === "lobby-join") this.startJoinLobbyWebRtc();
+          }
           return;
         }
 
@@ -8619,11 +8807,15 @@
           } else {
             drawLabel("DELA KODEN MED DIN VAN:", 30, 146, "#9bd4ff");
             drawLabel(this.net.code || "------", 184, 174, "#ffd166");
+            drawLabel("ENTER = INTERNET-KOD (LANG)", 106, 224, "#9bd4ff");
           }
           drawLabel("VANTAR PA JOIN...", 156, 202, "#f0f4ff");
         } else if (this.state === "lobby-join") {
           if (this.net.transport === "webrtc") drawLabel("ANSLUTER MED HOST-KOD FRAN POPUP", 56, 156, "#9bd4ff");
-          else drawLabel(`ANSLUTER MED KOD ${this.net.code}`, 86, 156, "#9bd4ff");
+          else {
+            drawLabel(`ANSLUTER MED KOD ${this.net.code}`, 86, 156, "#9bd4ff");
+            drawLabel("ENTER = INTERNET-KOD (LANG)", 106, 204, "#9bd4ff");
+          }
           drawLabel("VANTAR PA HOST-START...", 132, 182, "#f0f4ff");
         } else {
           drawLabel("ANSLUTEN. VANTAR PA MATCH-START...", 86, 170, "#f0f4ff");
